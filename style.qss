@@ -1,0 +1,122 @@
+/* ---------- General Style ---------- */
+QWidget {
+    background-color: #1e1e2e;
+    color: #ffffff;
+    font-family: "Segoe UI";
+    font-size: 14px;
+}
+
+/* ---------- Title ---------- */
+#titleLabel, #contentTitle {
+    font-size: 26px;
+    font-weight: bold;
+    color: #89b4fa;
+}
+
+/* ---------- Input Fields ---------- */
+QLineEdit {
+    background: #313244;
+    border: 2px solid #45475a;
+    border-radius: 10px;
+    padding: 10px;
+    color: #fff;
+}
+
+QLineEdit:focus {
+    border: 2px solid #89b4fa;
+}
+
+/* ---------- Buttons ---------- */
+QPushButton {
+    background: #89b4fa;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    color: #1e1e2e;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background: #74b0ff;
+}
+
+QPushButton:pressed {
+    background: #5a9bff;
+}
+
+/* ---------- Sidebar ---------- */
+#sidebar {
+    background-color: #181825;
+    border-right: 2px solid #313244;
+}
+
+#sideButton {
+    background: #313244;
+    border-radius: 8px;
+    margin: 8px;
+    padding: 10px;
+    font-size: 15px;
+    color: #cdd6f4;
+}
+
+#sideButton:hover {
+    background: #45475a;
+}
+
+#sideTitle {
+    color: #89b4fa;
+    font-size: 22px;
+    padding: 20px 0;
+    font-weight: bold;
+}
+
+/* ---------- Content Area ---------- */
+#contentArea {
+    background: #11111b;
+    border-radius: 15px;
+    padding: 20px;
+}
+
+#contentText {
+    font-size: 17px;
+    color: #cdd6f4;
+}
+
+/* ---------- Scrollbars ---------- */
+QScrollBar:vertical {
+    background: #1e1e2e;
+    width: 12px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #89b4fa;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #74b0ff;
+}
+
+QScrollBar::add-line,
+QScrollBar::sub-line {
+    height: 0px;
+}
+QTableWidget {
+        background-color: rgba(255,255,255,0.05); /* شفاف مع خلفية داكنة */
+        gridline-color: #444444;
+        color: #ffffff;
+        font: 14px "Segoe UI";
+    }
+QHeaderView::section {
+    background-color: rgba(255,255,255,0.1);
+    color: #ffffff;
+    font-weight: bold;
+    border: none;
+    padding: 4px;
+}
+QTableWidget::item:selected {
+    background-color: #1976d2;
+    color: white;
+}
