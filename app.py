@@ -94,7 +94,7 @@ class MainWindow(QtWidgets.QWidget):
 
             elif us == result[1] and ps == result[2] and (result[7] == 3)  :
 
-                self.Petition_Clerks_window = Petition_Clerks()
+                self.Petition_Clerks_window = Petition_Clerks(result[0])
                 self.Petition_Clerks_window.show()
                 self.username.clear()
                 self.password.clear()

@@ -130,53 +130,22 @@ border-bottom: 3px solid white;
          <number>20</number>
         </property>
         <item row="1" column="0">
-         <widget class="QLineEdit" name="passwordInput">
+         <widget class="QLineEdit" name="defendant_name">
           <property name="styleSheet">
            <string notr="true">QLineEdit {
 background-color:white;
 border:none;
-padding:15px;
+padding:10px;
+font-size: 17px;
 color:#452829;
 border-radius: 10px;
 }</string>
           </property>
-          <property name="echoMode">
-           <enum>QLineEdit::Password</enum>
+          <property name="text">
+           <string/>
           </property>
           <property name="placeholderText">
-           <string>كلمة المرور</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLineEdit" name="fullnameInput">
-          <property name="styleSheet">
-           <string notr="true">QLineEdit {
-background-color:white;
-border:none;
-padding:15px;
-color:#452829;
-border-radius: 10px;
-}</string>
-          </property>
-          <property name="placeholderText">
-           <string>الاسم الكامل</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="1">
-         <widget class="QLineEdit" name="departmentInput">
-          <property name="styleSheet">
-           <string notr="true">QLineEdit {
-background-color:white;
-border:none;
-padding:15px;
-color:#452829;
-border-radius: 10px;
-}</string>
-          </property>
-          <property name="placeholderText">
-           <string>القسم</string>
+           <string>اسم المدعى عليه</string>
           </property>
          </widget>
         </item>
@@ -192,83 +161,40 @@ padding-bottom: 15px;</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
-         <widget class="QLineEdit" name="emailInput">
-          <property name="styleSheet">
-           <string notr="true">QLineEdit {
-background-color:white;
-border:none;
-padding:15px;
-color:#452829;
-border-radius: 10px;
-}</string>
-          </property>
-          <property name="placeholderText">
-           <string>البريد الإلكتروني</string>
-          </property>
-         </widget>
-        </item>
         <item row="4" column="0">
-         <widget class="QLineEdit" name="jobInput">
+         <widget class="QLineEdit" name="defendant_address">
           <property name="styleSheet">
            <string notr="true">QLineEdit {
 background-color:white;
 border:none;
-padding:15px;
+padding:10px;
+font-size: 17px;
 color:#452829;
 border-radius: 10px;
 }</string>
           </property>
-          <property name="placeholderText">
-           <string>الوظيفة</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1">
-         <widget class="QLineEdit" name="statusInput">
-          <property name="styleSheet">
-           <string notr="true">QLineEdit {
-background-color:white;
-border:none;
-padding:15px;
-color:#452829;
-border-radius: 10px;
-}</string>
+          <property name="text">
+           <string/>
           </property>
           <property name="placeholderText">
-           <string>الحالة</string>
+           <string>عنوان المدعى عليه</string>
           </property>
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QLineEdit" name="usernameInput">
+         <widget class="QLineEdit" name="plaintiff_name">
           <property name="styleSheet">
            <string notr="true">QLineEdit {
 background-color:white;
 border:none;
-padding:15px;
+padding:10px;
+font-size: 17px;
 color:#452829;
 border-radius: 10px;
 }</string>
           </property>
           <property name="placeholderText">
-           <string>اسم المستخدم</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLineEdit" name="phoneInput">
-          <property name="styleSheet">
-           <string notr="true">QLineEdit {
-background-color:white;
-border:none;
-padding:15px;
-color:#452829;
-border-radius: 10px;
-}</string>
-          </property>
-          <property name="placeholderText">
-           <string>رقم الجوال</string>
+           <string>اسم المُدَّعي</string>
           </property>
          </widget>
         </item>
@@ -285,21 +211,8 @@ border-radius: 10px;
           </property>
          </spacer>
         </item>
-        <item row="6" column="0">
-         <spacer name="verticalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
         <item row="5" column="1">
-         <widget class="QPushButton" name="editEmployeeBtn">
+         <widget class="QPushButton" name="sendFile">
           <property name="minimumSize">
            <size>
             <width>0</width>
@@ -341,6 +254,19 @@ QPushButton:hover {
           </property>
          </widget>
         </item>
+        <item row="6" column="0">
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
         <item row="5" column="0">
          <widget class="QPushButton" name="editEmployeeBtn">
           <property name="minimumSize">
@@ -378,6 +304,101 @@ QPushButton:hover {
           </property>
           <property name="text">
            <string> طباعة الملف 🖨</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLineEdit" name="plaintiff_national_id">
+          <property name="styleSheet">
+           <string notr="true">QLineEdit {
+background-color:white;
+border:none;
+padding:10px;
+font-size: 17px;
+color:#452829;
+border-radius: 10px;
+}</string>
+          </property>
+          <property name="inputMethodHints">
+           <set>Qt::ImhNone</set>
+          </property>
+          <property name="echoMode">
+           <enum>QLineEdit::Normal</enum>
+          </property>
+          <property name="placeholderText">
+           <string>رقم هوية المدعي</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLineEdit" name="defendant_national_id">
+          <property name="styleSheet">
+           <string notr="true">QLineEdit {
+background-color:white;
+border:none;
+padding:10px;
+font-size: 17px;
+color:#452829;
+border-radius: 10px;
+}</string>
+          </property>
+          <property name="placeholderText">
+           <string>رقم هوية المدعى عليه</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLineEdit" name="plaintiff_phone">
+          <property name="styleSheet">
+           <string notr="true">QLineEdit {
+background-color:white;
+border:none;
+padding:10px;
+font-size: 17px;
+color:#452829;
+border-radius: 10px;
+}</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="placeholderText">
+           <string>رقم جوال المدعي</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLineEdit" name="defendant_phone">
+          <property name="styleSheet">
+           <string notr="true">QLineEdit {
+background-color:white;
+border:none;
+padding:10px;
+font-size: 17px;
+color:#452829;
+border-radius: 10px;
+}</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="placeholderText">
+           <string>رقم جوال المدعى عليه</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QComboBox" name="comboBox">
+          <property name="font">
+           <font>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+          <property name="layoutDirection">
+           <enum>Qt::RightToLeft</enum>
+          </property>
+          <property name="currentText">
+           <string/>
           </property>
          </widget>
         </item>
@@ -428,7 +449,7 @@ border: solid 20px #f3db93;</string>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="editEmployeeBtn">
+          <widget class="QPushButton" name="case1">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -466,7 +487,7 @@ QPushButton:hover {
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="editEmployeeBtn">
+          <widget class="QPushButton" name="case2">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -504,7 +525,7 @@ QPushButton:hover {
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="editEmployeeBtn">
+          <widget class="QPushButton" name="case3">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -542,7 +563,7 @@ QPushButton:hover {
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="editEmployeeBtn">
+          <widget class="QPushButton" name="case4">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -580,7 +601,7 @@ QPushButton:hover {
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="editEmployeeBtn">
+          <widget class="QPushButton" name="case5">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -618,7 +639,7 @@ QPushButton:hover {
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="editEmployeeBtn">
+          <widget class="QPushButton" name="case6">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -669,7 +690,7 @@ QPushButton:hover {
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="editEmployeeBtn">
+          <widget class="QPushButton" name="logoutBtn">
            <property name="minimumSize">
             <size>
              <width>0</width>

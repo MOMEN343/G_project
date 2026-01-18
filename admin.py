@@ -399,7 +399,7 @@ class AddUserWindow(QMainWindow):
         self.close()
 
 class Petition_Clerks(QMainWindow):
-    def __init__(self):
+    def __init__(self, current_user_id):
         super().__init__()
         self.db = DataBase()
 
@@ -412,19 +412,116 @@ class Petition_Clerks(QMainWindow):
             color: #452829;
         }
     """)
+        self.sendFile.clicked.connect(self.register_client_to_db_and_generate_file_and_)
+        self.logoutBtn.clicked.connect(self.log_out)
+        self.c_u_i = current_user_id
+        # قائمة الأزرار
+        self.buttons = [self.case1, self.case2, self.case3, self.case4, self.case5, self.case6]
+        
+        for btn in self.buttons:
+            btn.clicked.connect(self.update_label_text)
 
-        # ربط زر أو أكثر لفتح صفحة التسجيل
-        # self.case_present_alimony.clicked.connect(self.register_client)
-        # self.case_absent_alimony.clicked.connect(self.register_client)
-        # self.case_present_furniture.clicked.connect(self.register_client)
-        # self.case_absent_furniture.clicked.connect(self.register_client)
-        # self.case_present_dowry.clicked.connect(self.register_client)
-        # self.case_absent_dowry.clicked.connect(self.register_client)
-    
+    def update_label_text(self):
+        sender = self.sender()
+        if sender:
+            # تحديث النص بناءً على نص الزر المضغوط
+            self.label_2.setText(f"أدخل بيانات لائحة دعوى {sender.text()}")
+        print(sender.text())
+
+        self.db = DataBase()
+        self.comboBox.clear()
+        self.comboBox.addItem("اختر المستلم")
+        self.db.cur.execute("SELECT user_id, full_name FROM cms.users WHERE role_id = '2'")
+        users = self.db.cur.fetchall()
+        for user in users:
+            self.comboBox.addItem(user[1], user[0])
+
+    def register_client_to_db_and_generate_file_and_(self):
+        self.client_id = random.randint(1, 10000000)
+        db = DataBase()
+        db.cur.execute("""
+            INSERT INTO cms.client (client_id, plaintiff_name, plaintiff_national_id, plaintiff_phone,
+                                    defendant_name, defendant_national_id, defendant_phone, defendant_address, case_type)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            self.client_id,
+            self.plaintiff_name.text(),
+            self.plaintiff_national_id.text(),
+            self.plaintiff_phone.text(),
+            self.defendant_name.text(),
+            self.defendant_national_id.text(),
+            self.defendant_phone.text(),
+            self.defendant_address.text(),
+            self.case1
+        ))
+        db.conn.commit()
+        db.close()
+
+        QMessageBox.information(self, "Success", f"Client registered successfully!\nClient ID: {self.client_id}")
+        
+        if not hasattr(self, 'client_id'):
+            QMessageBox.warning(self, "Error", "Register the client first!")
+            return
+        if not os.path.exists(self.template_path):
+            QMessageBox.warning(self, "Error", "Original template not found!")
+            return
+
+        final_dir = "./file"
+        os.makedirs(final_dir, exist_ok=True)
+        final_file = f"{final_dir}/final_{self.case_type}_{self.plaintiff_name.text()}.docx"
+        shutil.copy(self.template_path, final_file)
+
+        doc = Document(final_file)
+
+        placeholders = {
+            "{DATE_DAY}": "الاثنين",                     # اليوم
+            "{DATE_FULL}": "13/01/2026",                 # التاريخ الكامل
+            "{PLAINTIFF_NAME}": "أسماء أحمد محمد",       # اسم المدعية
+            "{PLAINTIFF_ADDRESS}": "غزة معسكر الشاطئ",   # عنوان المدعية
+            "{LAWYER_NAME}": "خليل الاسطب",             # اسم المحامي
+            "{CLERK_NAME}": "مؤمن كريزم",               # اسم المحضر
+            "{DEFENDANT_NAME}": "محمد علي حسن",         # اسم المدعى عليه
+            "{DEFENDANT_ADDRESS}": "غزة شارع الوحدة",    # عنوان المدعى عليه
+            "{CONTACT_PERSON}": "أحمد محمود",           # الشخص المخاطب مع المدعى عليه
+            "{CONTRACT_DATE}": "18/2/2013",             # تاريخ العقد الشرعي
+            "{INCOME}": "1000",                          # صافي الدخل الشهري
+            "{PROPERTIES}": "خمس عقارات",               # الممتلكات
+            "{PROPERTY_INCOME}": "100000 $",             # دخل الممتلكات
+            "{TOTAL_INCOME}": "11110000",                # إجمالي الدخل
+            "{COURT_NAME}": "محكمة الشجاعية",           # اسم المحكمة
+            "{COURT_ADDRESS}": "غزة شارع النصر",        # عنوان المحكمة
+            "{SESSION_DATE}": "9/11/2021",              # تاريخ الجلسة
+        }
+
+        if not hasattr(self, 'document_id'):
+            QMessageBox.warning(self, "Error", "Generate the document first!")
+            return
+
+        receiver_id = self.receiver_combo.currentData()
+        if receiver_id is None:
+            QMessageBox.warning(self, "Error", "Please select a receiver!")
+            return
+
+        db = DataBase()
+        transfer_id = random.randint(1, 1000000)
+        transfer_date = date.today()
+        status = "pending"
+
+        db.cur.execute("""
+            INSERT INTO cms.file_transfer (transfer_id, transfer_date, status, document_id, sender_id, receiver_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (transfer_id, transfer_date, status, self.document_id, self.current_user_id, receiver_id))
+
+        db.conn.commit()
+        db.close()
+        QMessageBox.information(self, "Success", f"File sent successfully to the selected receiver!")
+
     def register_client (self):
-
         self.register_petitions = Register_petitions()
         self.register_petitions.show()
+
+    def log_out (self):
+        self.close()
 
 class Register_petitions (QWidget):
 
