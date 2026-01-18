@@ -87,7 +87,7 @@ class MainWindow(QtWidgets.QWidget):
 
             elif us == result[1] and ps == result[2] and (result[7] == 2)  :
 
-                self.user_window = UserWindow()
+                self.user_window = UserWindow(result[0])
                 self.user_window.show()
                 self.username.clear()
                 self.password.clear()

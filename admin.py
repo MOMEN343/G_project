@@ -81,53 +81,59 @@ class AdminWindow(QMainWindow):
     def log_out (self):
         self.close()
 
-
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QPushButton, QScrollArea, QGridLayout,
+    QTableWidget, QTableWidgetItem, QHeaderView, QDialog, QMessageBox
+)
+from PyQt5.QtCore import Qt
+import os
+from db import DataBase
+from datetime import date
 
 class UserWindow(QWidget):
-
-    def __init__(self):
+    def __init__(self, current_user_id):
         super().__init__()
-
+        self.current_user_id = current_user_id
         self.db = DataBase()
 
-        self.setWindowTitle("Modern Login – PyQt + QSS")
+        self.setWindowTitle("User Dashboard")
         self.setFixedSize(950, 900)
 
-
-        self.title = QLabel(f"Welcome to you in the program ❤️")
+        # Title
+        self.title = QLabel("Welcome to the program ❤️")
         self.title.setAlignment(Qt.AlignCenter)
         self.title.setObjectName("titleLabel")
 
+        # Buttons
         self.new_case = QPushButton("New Case")
-        self.new_case.setObjectName("New Case")
+        self.new_case.clicked.connect(self.new_case_dialog)
 
-        self.documents = QPushButton("documents")
-        self.documents.setObjectName("documents")
+        self.documents = QPushButton("Documents")
+        self.documents.clicked.connect(self.show_documents)
 
-        self.client = QPushButton("client")
-        self.client.setObjectName("client")
+        self.client = QPushButton("Client")
+        self.client.clicked.connect(self.show_clients)
 
-        self.table = QTableWidget(self)
-        self.table.setRowCount(0)
+        # Client Table
+        self.table = QTableWidget()
         self.table.setColumnCount(8)
-        self.table.setHorizontalHeaderLabels(["plaintiff_name", "plaintiff_national_id", "plaintiff_phone","defendant_name","defendant_national_id","defendant_phone","defendant_address","case_type"])
-
-        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.setHorizontalHeaderLabels([
+            "Plaintiff Name", "Plaintiff ID", "Plaintiff Phone",
+            "Defendant Name", "Defendant ID", "Defendant Phone",
+            "Defendant Address", "Case Type"
+        ])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.table.verticalHeader().setDefaultSectionSize(30)
-        self.db.cur.execute("SELECT * FROM cms.client ")
-        result = self.db.cur.fetchall()
+        self.table.hide()
 
-        for user in result : 
-
-            row_position = self.table.rowCount()
-            self.table.insertRow(row_position)
-            self.table.setItem(row_position, 0, QTableWidgetItem(user[1]))
-            self.table.setItem(row_position, 1, QTableWidgetItem(user[2]))
-            self.table.setItem(row_position, 2, QTableWidgetItem(user[3]))
-            self.table.setItem(row_position, 3, QTableWidgetItem(user[4]))
-            self.table.setItem(row_position, 4, QTableWidgetItem(user[5]))
-            self.table.setItem(row_position, 5, QTableWidgetItem(user[6])) 
+        # Documents Area
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.files_widget = QWidget()
+        self.grid_layout = QGridLayout()
+        self.grid_layout.setAlignment(Qt.AlignTop)
+        self.files_widget.setLayout(self.grid_layout)
+        self.scroll_area.setWidget(self.files_widget)
+        self.scroll_area.hide()
 
         # Layout
         layout = QVBoxLayout()
@@ -136,14 +142,182 @@ class UserWindow(QWidget):
         layout.addWidget(self.documents)
         layout.addWidget(self.client)
         layout.addWidget(self.table)
-
-
+        layout.addWidget(self.scroll_area)
         self.setLayout(layout)
 
-
-    # تحميل ملف الستايل QSS
         with open("style.qss", "r") as f:
             self.setStyleSheet(f.read())
+
+    # ================= CLIENT =================
+    def show_clients(self):
+        self.scroll_area.hide()
+        self.table.show()
+        self.load_clients()
+
+    def load_clients(self):
+        self.table.setRowCount(0)
+        db = DataBase()
+        db.cur.execute("""
+            SELECT 
+                client_id,
+                plaintiff_name,
+                plaintiff_national_id,
+                plaintiff_phone,
+                defendant_name,
+                defendant_national_id,
+                defendant_phone,
+                defendant_address,
+                case_type
+            FROM cms.client
+        """)
+        clients = db.cur.fetchall()
+        db.close()
+
+        self.table.setRowCount(len(clients))
+        for row, client in enumerate(clients):
+            for col, value in enumerate(client[1:]):  # عرض كل شيء ما عدا client_id
+                self.table.setItem(row, col, QTableWidgetItem(str(value)))
+
+    # ================= DOCUMENTS =================
+    def show_documents(self):
+        self.table.hide()
+        self.scroll_area.show()
+
+        for i in reversed(range(self.grid_layout.count())):
+            widget = self.grid_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        db = DataBase()
+        db.cur.execute("""
+            SELECT d.file_path
+            FROM cms.file_transfer ft
+            JOIN cms.document d ON ft.document_id = d.document_id
+            WHERE ft.receiver_id = %s
+            ORDER BY ft.transfer_date DESC
+        """, (self.current_user_id,))
+        files = db.cur.fetchall()
+        db.close()
+
+        row = col = 0
+        for (file_path,) in files:
+            card = QWidget()
+            card_layout = QVBoxLayout(card)
+
+            icon = QLabel("📄")
+            icon.setAlignment(Qt.AlignCenter)
+            icon.setStyleSheet("font-size: 40px;")
+
+            name = QLabel(os.path.basename(file_path))
+            name.setAlignment(Qt.AlignCenter)
+            name.setWordWrap(True)
+
+            open_btn = QPushButton("Open")
+            open_btn.clicked.connect(lambda checked, p=file_path: self.open_file(p))
+
+            card_layout.addWidget(icon)
+            card_layout.addWidget(name)
+            card_layout.addWidget(open_btn)
+
+            self.grid_layout.addWidget(card, row, col)
+
+            col += 1
+            if col == 4:
+                col = 0
+                row += 1
+
+    def open_file(self, file_path):
+        if os.path.exists(file_path):
+            os.startfile(file_path)
+        else:
+            QMessageBox.warning(self, "Error", "File not found")
+
+    # ================= NEW CASE =================
+    def new_case_dialog(self):
+        db = DataBase()
+
+        # جلب كل العملاء
+        db.cur.execute("""
+            SELECT client_id, plaintiff_name, case_type
+            FROM cms.client
+        """)
+        clients = db.cur.fetchall()
+        db.close()
+
+        if not clients:
+            QMessageBox.information(self, "Info", "No clients found in the database.")
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Create New Case")
+        dialog.setFixedSize(450, 300)
+        layout = QVBoxLayout(dialog)
+
+        label = QLabel("اختر لائحة الدعوى:")
+        layout.addWidget(label)
+
+        # جدول اختيار العميل
+        table = QTableWidget()
+        table.setColumnCount(2)
+        table.setHorizontalHeaderLabels(["Client Name", "Case Type"])
+        table.setRowCount(len(clients))
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+        for row, client in enumerate(clients):
+            client_id, name, case_type = client
+            table.setItem(row, 0, QTableWidgetItem(name))
+            table.setItem(row, 1, QTableWidgetItem(case_type))
+        layout.addWidget(table)
+
+        save_btn = QPushButton("Create Case")
+        layout.addWidget(save_btn)
+
+        def create_case():
+            selected_rows = table.selectionModel().selectedRows()
+            if not selected_rows:
+                QMessageBox.warning(dialog, "Warning", "اختر لائحة أولاً")
+                return
+            row_idx = selected_rows[0].row()
+            client_id, name, case_type = clients[row_idx]
+
+            # 1️⃣ إنشاء رقم القضية
+            case_number = f"CASE-{date.today().strftime('%Y%m%d')}-{row_idx+1}"
+            filing_date = date.today()
+            status = "Open"
+
+            db = DataBase()
+            # 2️⃣ إدراج القضية
+            db.cur.execute("""
+                INSERT INTO cms.court_case (case_type, case_number, status, filing_date, created_by)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING case_id
+            """, (case_type, case_number, status, filing_date, self.current_user_id))
+            new_case_id = db.cur.fetchone()[0]
+
+            # 3️⃣ ربط العميل بالقضية في case_client
+            db.cur.execute("""
+                INSERT INTO cms.case_client (case_id, client_id, role_in_case)
+                VALUES (%s, %s, %s)
+            """, (new_case_id, client_id, "Plaintiff"))
+
+            # 4️⃣ ربط المستندات بالقضية حسب case_type
+            db.cur.execute("""
+                UPDATE cms.document
+                SET case_id = %s
+                WHERE uploaded_by = %s AND case_id IS NULL AND document_type = %s
+            """, (new_case_id, self.current_user_id, case_type))
+
+            db.conn.commit()
+            db.close()
+
+            QMessageBox.information(dialog, "Success", f"Case created successfully with ID {new_case_id}")
+            dialog.accept()
+
+        save_btn.clicked.connect(create_case)
+        dialog.exec_()
+
+
+
 
 class AddUserWindow(QMainWindow):
     def __init__(self, admin_window):

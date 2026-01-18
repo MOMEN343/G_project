@@ -285,6 +285,44 @@ border: solid 20px #f3db93;</string>
           <number>20</number>
          </property>
          <item>
+          <widget class="QPushButton" name="addEmployeeBtn">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>40</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <family>Times New Roman</family>
+             <pointsize>12</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+color:#f3e8df;
+border-bottom: 1px solid #f3e8df ;
+padding-bottom: 10px;
+
+}
+
+QPushButton:hover {
+    background: white;
+	color:#452829;
+	padding-bottom: 5px;
+}</string>
+           </property>
+           <property name="text">
+            <string>إضافة موظف</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="editEmployeeBtn">
            <property name="minimumSize">
             <size>
