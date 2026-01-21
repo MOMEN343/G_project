@@ -482,7 +482,7 @@ QPushButton:hover {
 }</string>
            </property>
            <property name="text">
-            <string>نفقة زوجة حضوري</string>
+            <string>نفقة زوجة </string>
            </property>
           </widget>
          </item>
@@ -520,7 +520,7 @@ QPushButton:hover {
 }</string>
            </property>
            <property name="text">
-            <string>نفقة زوجة غيابي</string>
+            <string>عفش بيت </string>
            </property>
           </widget>
          </item>
@@ -558,121 +558,7 @@ QPushButton:hover {
 }</string>
            </property>
            <property name="text">
-            <string>عفش بيت حضوري</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="case4">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>40</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>Times New Roman</family>
-             <pointsize>12</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-color:#f3e8df;
-border-bottom: 1px solid #f3e8df ;
-padding-bottom: 10px;
-
-}
-
-QPushButton:hover {
-    background: white;
-	color:#452829;
-	padding-bottom: 5px;
-}</string>
-           </property>
-           <property name="text">
-            <string>عفش بيت غيابي</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="case5">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>40</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>Times New Roman</family>
-             <pointsize>12</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-color:#f3e8df;
-border-bottom: 1px solid #f3e8df ;
-padding-bottom: 10px;
-
-}
-
-QPushButton:hover {
-    background: white;
-	color:#452829;
-	padding-bottom: 5px;
-}</string>
-           </property>
-           <property name="text">
-            <string>مهر مؤجل حضوري</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="case6">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>40</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>Times New Roman</family>
-             <pointsize>12</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-color:#f3e8df;
-border-bottom: 1px solid #f3e8df ;
-padding-bottom: 10px;
-
-}
-
-QPushButton:hover {
-    background: white;
-	color:#452829;
-	padding-bottom: 5px;
-}</string>
-           </property>
-           <property name="text">
-            <string>مهر مؤجل غيابي</string>
+            <string>مهر مؤجل</string>
            </property>
           </widget>
          </item>

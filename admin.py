@@ -1,4 +1,3 @@
-
 import random
 from PyQt5 import uic,QtWidgets
 from PyQt5.QtWidgets import QWidget
@@ -6,7 +5,6 @@ from db import DataBase
 from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel, QLineEdit, QTableWidget, QTableWidgetItem, QVBoxLayout, QMessageBox
 from PyQt5.QtGui import QFontDatabase
 from PyQt5.QtWidgets import QHBoxLayout
-
 from PyQt5.QtWidgets import QHeaderView
 from PyQt5.QtCore import Qt
 
@@ -20,17 +18,16 @@ class AdminWindow(QMainWindow):
         # ربط الأزرار من الواجهة
         self.addEmployeeBtn.clicked.connect(self.open_add_user_window)
         self.logoutBtn.clicked.connect(self.log_out)
+
         self.showMaximized()
-        QFontDatabase.addApplicationFont("fonts/Alyamama-Bold.ttf")
-        
+        self.employeesTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        QFontDatabase.addApplicationFont("fonts/Alyamama-Bold.ttf")       
         self.setStyleSheet("""
     * {
         font-family: "Alyamama";
         color: white;
     }
 """)
-        self.employeesTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
 
         self.db.cur.execute("""
             SELECT 
@@ -59,8 +56,6 @@ class AdminWindow(QMainWindow):
             self.employeesTable.setItem(row_position, 6, QTableWidgetItem(str(user[6])))
 
 
-
-
     def open_add_user_window(self):
         self.adduser_window = AddUserWindow(self)  #  مرّر الكائن نفسه
         self.adduser_window.show()
@@ -87,6 +82,8 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 import os
+import shutil
+from docx import Document
 from db import DataBase
 from datetime import date
 
@@ -227,10 +224,14 @@ class UserWindow(QWidget):
                 row += 1
 
     def open_file(self, file_path):
-        if os.path.exists(file_path):
-            os.startfile(file_path)
-        else:
-            QMessageBox.warning(self, "Error", "File not found")
+        try:
+            abs_path = os.path.abspath(file_path)
+            if os.path.exists(abs_path):
+                os.startfile(abs_path)
+            else:
+                QMessageBox.warning(self, "Error", f"File not found at:\n{abs_path}")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Could not open file: {e}")
 
     # ================= NEW CASE =================
     def new_case_dialog(self):
@@ -402,6 +403,8 @@ class Petition_Clerks(QMainWindow):
     def __init__(self, current_user_id):
         super().__init__()
         self.db = DataBase()
+        self.c_u_i = current_user_id
+        self.current_case_data = None # To store selected case config
 
         # تحميل الواجهة من ملف UI
         uic.loadUi("petition_clerks2.ui", self)  
@@ -412,23 +415,50 @@ class Petition_Clerks(QMainWindow):
             color: #452829;
         }
     """)
-        self.sendFile.clicked.connect(self.register_client_to_db_and_generate_file_and_)
+        
+        # Connect main buttons
+        self.sendFile.clicked.connect(self.process_full_workflow)
         self.logoutBtn.clicked.connect(self.log_out)
-        self.c_u_i = current_user_id
-        # قائمة الأزرار
-        self.buttons = [self.case1, self.case2, self.case3, self.case4, self.case5, self.case6]
+        
+        # Case Configurations
+        self.case_config = {
+            "case1": {"label": "نفقة زوجة", "template": "nafqa.docx"},
+            "case2": {"label": "عفش بيت", "template": "nafqa.docx"}, 
+            "case3": {"label": "مهر مؤجل", "template": "nafqa.docx"},
+            "case4": {"label": "نفقة عفش غيابي", "template": "nafqa.docx"},
+            "case5": {"label": "نفقة زوجة غيابي", "template": "nafqa.docx"},
+            "case6": {"label": "نفقة صغار", "template": "nafqa.docx"},
+        }
+
+        # Case Selection Buttons
+        self.buttons = [self.case1, self.case2, self.case3]
+        # Try to add other buttons if they exist in UI but aren't in list yet, or stick to list
+        # The user's earlier list had up to case6, but snippet showed 3. 
+        # I'll rely on the buttons list and ensure the mapping handles them.
         
         for btn in self.buttons:
-            btn.clicked.connect(self.update_label_text)
+            btn.clicked.connect(self.handle_case_selection)
 
-    def update_label_text(self):
+        # Populate Receivers
+        self.load_receivers()
+
+    def handle_case_selection(self):
         sender = self.sender()
         if sender:
-            # تحديث النص بناءً على نص الزر المضغوط
-            self.label_2.setText(f"أدخل بيانات لائحة دعوى {sender.text()}")
-        print(sender.text())
+            btn_name = sender.objectName()
+            if btn_name in self.case_config:
+                self.current_case_data = self.case_config[btn_name]
+                # Store the key or label as the case_type for DB?
+                # Usually text is better for readability unless there's an enum.
+                # using label for display and DB
+                self.current_case_type = self.current_case_data["label"] 
+                self.label_2.setText(f"أدخل بيانات {self.current_case_type}")
+            else:
+                self.current_case_type = sender.text() # Fallback
+                self.current_case_data = {"label": sender.text(), "template": "nafqa.docx"}
+                self.label_2.setText(f"أدخل بيانات {self.current_case_type}")
 
-        self.db = DataBase()
+    def load_receivers(self):
         self.comboBox.clear()
         self.comboBox.addItem("اختر المستلم")
         self.db.cur.execute("SELECT user_id, full_name FROM cms.users WHERE role_id = '2'")
@@ -436,196 +466,154 @@ class Petition_Clerks(QMainWindow):
         for user in users:
             self.comboBox.addItem(user[1], user[0])
 
-    def register_client_to_db_and_generate_file_and_(self):
-        self.client_id = random.randint(1, 10000000)
-        db = DataBase()
-        db.cur.execute("""
-            INSERT INTO cms.client (client_id, plaintiff_name, plaintiff_national_id, plaintiff_phone,
-                                    defendant_name, defendant_national_id, defendant_phone, defendant_address, case_type)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            self.client_id,
-            self.plaintiff_name.text(),
-            self.plaintiff_national_id.text(),
-            self.plaintiff_phone.text(),
-            self.defendant_name.text(),
-            self.defendant_national_id.text(),
-            self.defendant_phone.text(),
-            self.defendant_address.text(),
-            self.case1
-        ))
-        db.conn.commit()
-        db.close()
-
-        QMessageBox.information(self, "Success", f"Client registered successfully!\nClient ID: {self.client_id}")
-        
-        if not hasattr(self, 'client_id'):
-            QMessageBox.warning(self, "Error", "Register the client first!")
+    def process_full_workflow(self):
+        # Validation
+        if not self.current_case_data:
+            QMessageBox.warning(self, "Error", "الرجاء اختيار نوع القضية أولاً!")
             return
-        if not os.path.exists(self.template_path):
+
+        receiver_id = self.comboBox.currentData()
+        if receiver_id is None:
+             QMessageBox.warning(self, "Error", "الرجاء اختيار المستلم!")
+             return
+
+        # 1. Register Client
+        try:
+            self.client_id = random.randint(1, 10000000)
+            # Re-open DB connection for transaction
+            db = DataBase()
+            db.cur.execute("""
+                INSERT INTO cms.client (client_id, plaintiff_name, plaintiff_national_id, plaintiff_phone,
+                                        defendant_name, defendant_national_id, defendant_phone, defendant_address, case_type)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                self.client_id,
+                self.plaintiff_name.text(),
+                self.plaintiff_national_id.text(),
+                self.plaintiff_phone.text(),
+                self.defendant_name.text(),
+                self.defendant_national_id.text(),
+                self.defendant_phone.text(),
+                self.defendant_address.text(),
+                self.current_case_type 
+            ))
+            db.conn.commit()
+            db.close()
+        except Exception as e:
+             QMessageBox.warning(self, "Error", f"Failed to register client: {str(e)}")
+             return
+
+        # 2. Generate File
+        template_name = self.current_case_data.get("template", "nafqa.docx")
+        template_path = f"./file/{template_name}" 
+        if not os.path.exists(template_path):
             QMessageBox.warning(self, "Error", "Original template not found!")
             return
 
-        final_dir = "./file"
+        final_dir = os.path.abspath("./file")
         os.makedirs(final_dir, exist_ok=True)
-        final_file = f"{final_dir}/final_{self.case_type}_{self.plaintiff_name.text()}.docx"
-        shutil.copy(self.template_path, final_file)
+        # Sanitize filename: Use only Client ID to avoid encoding issues on Windows
+        # Or if we must include name, ensure it works. But explicit ID is safest.
+        # Let's try to include name but stripped of problematic chars?
+        # The user's error showed mojibake, likely due to arabic.
+        # Safest is just ID or strict alphanumeric.
+        # Let's stick to ID + simple timestamp or just ID.
+        final_file = os.path.join(final_dir, f"final_{self.client_id}.docx")
+        
+        try:
+            shutil.copy(template_path, final_file)
+            doc = Document(final_file)
+            
+            days_map = {
+                "Saturday": "السبت", "Sunday": "الأحد", "Monday": "الاثنين", "Tuesday": "الثلاثاء",
+                "Wednesday": "الأربعاء", "Thursday": "الخميس", "Friday": "الجمعة"
+            }
+            day_in_arabic = days_map.get(date.today().strftime("%A"), date.today().strftime("%A"))
 
-        doc = Document(final_file)
+            placeholders = {
+                "{DATE_DAY}": day_in_arabic,
+                "{DATE_FULL}": date.today().strftime("%d/%m/%Y"),
+                "{PLAINTIFF_NAME}": self.plaintiff_name.text(),
+                "{PLAINTIFF_ADDRESS}": "غزة معسكر الشاطئ", 
+                "{LAWYER_NAME}": "معتصم كريزم",             
+                "{CLERK_NAME}": "مؤمن كريزم",               
+                "{DEFENDANT_NAME}": self.defendant_name.text(),
+                "{DEFENDANT_ADDRESS}": self.defendant_address.text(),
+                "{CONTACT_PERSON}": "أحمد محمود",           
+                "{CONTRACT_DATE}": "18/2/2013",             
+                "{INCOME}": "1000",                          
+                "{PROPERTIES}": "خمس عقارات",               
+                "{PROPERTY_INCOME}": "100000 $",             
+                "{TOTAL_INCOME}": "11110000",                
+                "{COURT_NAME}": "محكمة الشجاعية",           
+                "{COURT_ADDRESS}": "غزة شارع النصر",        
+                "{SESSION_DATE}": "9/11/2021",              
+            }
 
-        placeholders = {
-            "{DATE_DAY}": "الاثنين",                     # اليوم
-            "{DATE_FULL}": "13/01/2026",                 # التاريخ الكامل
-            "{PLAINTIFF_NAME}": "أسماء أحمد محمد",       # اسم المدعية
-            "{PLAINTIFF_ADDRESS}": "غزة معسكر الشاطئ",   # عنوان المدعية
-            "{LAWYER_NAME}": "خليل الاسطب",             # اسم المحامي
-            "{CLERK_NAME}": "مؤمن كريزم",               # اسم المحضر
-            "{DEFENDANT_NAME}": "محمد علي حسن",         # اسم المدعى عليه
-            "{DEFENDANT_ADDRESS}": "غزة شارع الوحدة",    # عنوان المدعى عليه
-            "{CONTACT_PERSON}": "أحمد محمود",           # الشخص المخاطب مع المدعى عليه
-            "{CONTRACT_DATE}": "18/2/2013",             # تاريخ العقد الشرعي
-            "{INCOME}": "1000",                          # صافي الدخل الشهري
-            "{PROPERTIES}": "خمس عقارات",               # الممتلكات
-            "{PROPERTY_INCOME}": "100000 $",             # دخل الممتلكات
-            "{TOTAL_INCOME}": "11110000",                # إجمالي الدخل
-            "{COURT_NAME}": "محكمة الشجاعية",           # اسم المحكمة
-            "{COURT_ADDRESS}": "غزة شارع النصر",        # عنوان المحكمة
-            "{SESSION_DATE}": "9/11/2021",              # تاريخ الجلسة
-        }
+            def replace_placeholders(doc, placeholders):
+                for p in doc.paragraphs:
+                    for run in p.runs:
+                        for key, val in placeholders.items():
+                            if key in run.text:
+                                run.text = run.text.replace(key, val)
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            for p in cell.paragraphs:
+                                for run in p.runs:
+                                    for key, val in placeholders.items():
+                                        if key in run.text:
+                                            run.text = run.text.replace(key, val)
 
-        if not hasattr(self, 'document_id'):
-            QMessageBox.warning(self, "Error", "Generate the document first!")
+            replace_placeholders(doc, placeholders)
+            doc.save(final_file)
+            
+             # Save to DB
+            db = DataBase()
+            case_id = 1 
+            db.cur.execute("""
+                INSERT INTO cms.document (document_type, file_path, uploaded_by,case_id)
+                VALUES (%s, %s, %s, %s)
+                RETURNING document_id
+            """, (self.current_case_type, final_file, self.c_u_i, case_id))
+            self.document_id = db.cur.fetchone()[0]
+            db.conn.commit()
+            db.close()
+            
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to generate file: {str(e)}")
             return
 
-        receiver_id = self.receiver_combo.currentData()
-        if receiver_id is None:
-            QMessageBox.warning(self, "Error", "Please select a receiver!")
-            return
+        # 3. Send File (File Transfer)
+        try:
+            db = DataBase()
+            transfer_id = random.randint(1, 1000000)
+            transfer_date = date.today()
+            status = "pending"
 
-        db = DataBase()
-        transfer_id = random.randint(1, 1000000)
-        transfer_date = date.today()
-        status = "pending"
+            db.cur.execute("""
+                INSERT INTO cms.file_transfer (transfer_id, transfer_date, status, document_id, sender_id, receiver_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (transfer_id, transfer_date, status, self.document_id, self.c_u_i, receiver_id))
 
-        db.cur.execute("""
-            INSERT INTO cms.file_transfer (transfer_id, transfer_date, status, document_id, sender_id, receiver_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (transfer_id, transfer_date, status, self.document_id, self.current_user_id, receiver_id))
+            db.conn.commit()
+            db.close()
+            QMessageBox.information(self, "Success", f"Client Registered, File Generated & Sent Successfully!")
+            
+            # Clear fields
+            self.plaintiff_name.clear()
+            self.plaintiff_national_id.clear()
+            self.plaintiff_phone.clear()
+            self.defendant_name.clear()
+            self.defendant_national_id.clear()
+            self.defendant_phone.clear()
+            self.defendant_address.clear()
+            self.comboBox.setCurrentIndex(0)
+            self.current_case_type = None
+            self.label_2.setText("أدخل بيانات لائحة الدعوى:")
 
-        db.conn.commit()
-        db.close()
-        QMessageBox.information(self, "Success", f"File sent successfully to the selected receiver!")
-
-    def register_client (self):
-        self.register_petitions = Register_petitions()
-        self.register_petitions.show()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to send file: {str(e)}")
 
     def log_out (self):
-        self.close()
-
-class Register_petitions (QWidget):
-
-    def __init__(self):
-        super().__init__()
-        self.setFixedSize(550, 500)
-
-        # عناصر الواجهة
-        self.title = QLabel("Register_Client")
-        self.title.setAlignment(Qt.AlignCenter)
-        self.title.setObjectName("inputField")
-
-        self.plaintiff_name = QLineEdit()
-        self.plaintiff_name.setPlaceholderText("plaintiff name")
-        self.plaintiff_name.setObjectName("inputField")
-
-        self.plaintiff_national_id = QLineEdit()
-        self.plaintiff_national_id.setPlaceholderText("plaintiff national id")
-        self.plaintiff_national_id.setObjectName("inputField")
-
-        self.plaintiff_phone = QLineEdit()
-        self.plaintiff_phone.setPlaceholderText("plaintiff phone")
-        self.plaintiff_phone.setObjectName("inputField")
-
-        self.defendant_name = QLineEdit()
-        self.defendant_name.setPlaceholderText("defendant name")
-        self.defendant_name.setObjectName("inputField")
-
-        self.defendant_national_id = QLineEdit()
-        self.defendant_national_id.setPlaceholderText("defendant national id")
-        self.defendant_national_id.setObjectName("inputField")
-
-        self.defendant_phone = QLineEdit()
-        self.defendant_phone.setPlaceholderText("defendant phone")
-        self.defendant_phone.setObjectName("inputField")
-
-        self.defendant_address = QLineEdit()
-        self.defendant_address.setPlaceholderText("defendant address")
-        self.defendant_address.setObjectName("inputField")
-
-        self.case_type = QLineEdit()
-        self.case_type.setPlaceholderText("case type")
-        self.case_type.setObjectName("inputField")
-
-
-
-
-        self.Register_Client_btn = QPushButton("Register Client")
-        self.Register_Client_btn.setObjectName("Register_Client")
-        self.Register_Client_btn.clicked.connect(self.Register_Client_to_db)
-
-        # Layout
-        layout = QVBoxLayout()
-        layout.addWidget(self.title)
-        layout.addWidget(self.plaintiff_name)
-        layout.addWidget(self.plaintiff_national_id)
-        layout.addWidget(self.plaintiff_phone)
-        layout.addWidget(self.defendant_name)
-        layout.addWidget(self.defendant_phone)
-        layout.addWidget(self.defendant_national_id)
-        layout.addWidget(self.defendant_address)
-        layout.addWidget(self.case_type)
-
-        layout.addWidget(self.Register_Client_btn)
-
-        self.setLayout(layout)
-
-        # تحميل ملف الستايل QSS
-        with open("style.qss", "r") as f:
-            self.setStyleSheet(f.read())
-    
-    def Register_Client_to_db(self):
-        id = random.randint(0,10000000)
-        print(id)
-        plaintiff_name = self.plaintiff_name.text()
-        plaintiff_national_id = self.plaintiff_national_id.text()
-        plaintiff_phone = self.plaintiff_phone.text()
-        defendant_name = self.defendant_name.text()
-        defendant_national_id = self.defendant_national_id.text()
-        defendant_phone = self.defendant_phone.text()
-        defendant_address = self.defendant_address.text()
-        case_type = self.case_type.text()
-
-        db = DataBase()
-        db.cur.execute(
-            "INSERT INTO cms.client (client_id, plaintiff_name, plaintiff_national_id,plaintiff_phone,defendant_name,defendant_national_id,defendant_phone,defendant_address,case_type) " \
-            "VALUES (%s, %s, %s,%s, %s, %s,%s, %s,%s)",
-            (id, plaintiff_name, plaintiff_national_id,plaintiff_phone,defendant_name,defendant_national_id,defendant_phone,defendant_address,case_type)
-        )
-        # QMessageBox.warning(self, "User added successfully") 
-
-        self.plaintiff_name.clear()
-        self.plaintiff_national_id.clear()
-        self.plaintiff_phone.clear()
-        self.defendant_name.clear()
-        self.defendant_national_id.clear()
-        self.defendant_phone.clear()
-        self.defendant_address.clear()
-        self.case_type.clear()
-        
-        db.conn.commit()
-        db.close()
-
-        QMessageBox.information(self, "success", "Client added successfully")
-
-
         self.close() 
