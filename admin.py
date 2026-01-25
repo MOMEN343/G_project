@@ -87,103 +87,53 @@ from docx import Document
 from db import DataBase
 from datetime import date
 
-class UserWindow(QWidget):
+class UserWindow(QMainWindow):
     def __init__(self, current_user_id):
         super().__init__()
         self.current_user_id = current_user_id
         self.db = DataBase()
 
-        self.setWindowTitle("User Dashboard")
-        self.setFixedSize(950, 900)
-
-        # Title
-        self.title = QLabel("Welcome to the program ❤️")
-        self.title.setAlignment(Qt.AlignCenter)
-        self.title.setObjectName("titleLabel")
-
-        # Buttons
-        self.new_case = QPushButton("New Case")
-        self.new_case.clicked.connect(self.new_case_dialog)
-
-        self.documents = QPushButton("Documents")
-        self.documents.clicked.connect(self.show_documents)
-
-        self.client = QPushButton("Client")
-        self.client.clicked.connect(self.show_clients)
-
-        # Client Table
-        self.table = QTableWidget()
-        self.table.setColumnCount(8)
-        self.table.setHorizontalHeaderLabels([
-            "Plaintiff Name", "Plaintiff ID", "Plaintiff Phone",
-            "Defendant Name", "Defendant ID", "Defendant Phone",
-            "Defendant Address", "Case Type"
-        ])
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.table.hide()
-
-        # Documents Area
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.files_widget = QWidget()
-        self.grid_layout = QGridLayout()
-        self.grid_layout.setAlignment(Qt.AlignTop)
-        self.files_widget.setLayout(self.grid_layout)
-        self.scroll_area.setWidget(self.files_widget)
-        self.scroll_area.hide()
-
-        # Layout
-        layout = QVBoxLayout()
-        layout.addWidget(self.title)
-        layout.addWidget(self.new_case)
-        layout.addWidget(self.documents)
-        layout.addWidget(self.client)
-        layout.addWidget(self.table)
-        layout.addWidget(self.scroll_area)
-        self.setLayout(layout)
-
-        with open("style.qss", "r") as f:
-            self.setStyleSheet(f.read())
-
-    # ================= CLIENT =================
-    def show_clients(self):
-        self.scroll_area.hide()
-        self.table.show()
-        self.load_clients()
-
-    def load_clients(self):
-        self.table.setRowCount(0)
-        db = DataBase()
-        db.cur.execute("""
-            SELECT 
-                client_id,
-                plaintiff_name,
-                plaintiff_national_id,
-                plaintiff_phone,
-                defendant_name,
-                defendant_national_id,
-                defendant_phone,
-                defendant_address,
-                case_type
-            FROM cms.client
+        # Load the new UI
+        uic.loadUi("employee.ui", self)
+        
+        # Apply the same logic as test.py for font application if needed, 
+        # or rely on the UI file's stylesheet + global font loading in app.py
+        self.setStyleSheet("""
+        * {
+            font-family: "Alyamama", "Segoe UI Symbol";
+            color: #452829;
+        }
         """)
-        clients = db.cur.fetchall()
-        db.close()
 
-        self.table.setRowCount(len(clients))
-        for row, client in enumerate(clients):
-            for col, value in enumerate(client[1:]):  # عرض كل شيء ما عدا client_id
-                self.table.setItem(row, col, QTableWidgetItem(str(value)))
+        # Connect Buttons
+        # Note: In the new UI, the buttons are named 'add_case' and 'docments' (typo in UI file acknowledged)
+        self.add_case.clicked.connect(self.new_case_dialog)
+        self.docments.clicked.connect(self.show_documents)
+        self.logoutBtn.clicked.connect(self.log_out)
+        
+        # The scroll area and stacked widget are now in the UI file.
+        # Structure: self.mainStack -> (page_empty, page_documents)
+        # self.page_documents -> scrollArea -> files_widget -> files_grid
+        
+        # Ensure we start at the empty page
+        if hasattr(self, 'mainStack'):
+             self.mainStack.setCurrentIndex(0)
+             
+        # Force alignment on the grid layout to prevent items from expanding to fill the whole area
+        if hasattr(self, 'files_grid'):
+            self.files_grid.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
-    # ================= DOCUMENTS =================
     def show_documents(self):
-        self.table.hide()
-        self.scroll_area.show()
+        if hasattr(self, 'mainStack'):
+            self.mainStack.setCurrentIndex(1) # Show documents page
 
-        for i in reversed(range(self.grid_layout.count())):
-            widget = self.grid_layout.itemAt(i).widget()
-            if widget:
-                widget.setParent(None)
+        # Clear existing
+        # Note: files_grid is loaded from UI
+        if hasattr(self, 'files_grid'):
+            for i in reversed(range(self.files_grid.count())):
+                widget = self.files_grid.itemAt(i).widget()
+                if widget:
+                    widget.setParent(None)
 
         db = DataBase()
         db.cur.execute("""
@@ -197,26 +147,46 @@ class UserWindow(QWidget):
         db.close()
 
         row = col = 0
+        
+        # If no files, maybe switch back to empty? Or show empty grid?
+        # User said "when the button clicked to apper", implying if clicked it should show. 
+        # But if empty list, page_empty might be better? 
+        # Stick to showing the page, even if empty.
+        
         for (file_path,) in files:
             card = QWidget()
+            card.setStyleSheet("background-color: white; border-radius: 10px; padding: 10px;")
             card_layout = QVBoxLayout(card)
 
             icon = QLabel("📄")
             icon.setAlignment(Qt.AlignCenter)
-            icon.setStyleSheet("font-size: 40px;")
+            icon.setStyleSheet("font-size: 40px; border: none;")
 
             name = QLabel(os.path.basename(file_path))
             name.setAlignment(Qt.AlignCenter)
             name.setWordWrap(True)
+            name.setStyleSheet("color: black; border: none;")
 
             open_btn = QPushButton("Open")
+            open_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #452829; 
+                    color: white; 
+                    border-radius: 5px;
+                    padding: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #f3db93;
+                    color: black;
+                }
+            """)
             open_btn.clicked.connect(lambda checked, p=file_path: self.open_file(p))
 
             card_layout.addWidget(icon)
             card_layout.addWidget(name)
             card_layout.addWidget(open_btn)
 
-            self.grid_layout.addWidget(card, row, col)
+            self.files_grid.addWidget(card, row, col)
 
             col += 1
             if col == 4:
@@ -232,6 +202,10 @@ class UserWindow(QWidget):
                 QMessageBox.warning(self, "Error", f"File not found at:\n{abs_path}")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Could not open file: {e}")
+            
+    def log_out(self):
+        self.close()
+
 
     # ================= NEW CASE =================
     def new_case_dialog(self):

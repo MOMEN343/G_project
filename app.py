@@ -8,7 +8,8 @@ from db import DataBase
 class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
-        uic.loadUi("login.ui", self)    
+        uic.loadUi("login.ui", self)  
+
         self.db = DataBase()   
 
         self.splitter.setSizes([self.width()//2, self.width()//2]) 
