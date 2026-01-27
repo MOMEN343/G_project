@@ -13,7 +13,7 @@ class AdminWindow(QMainWindow):
         super().__init__()
         self.db = DataBase()
 
-        uic.loadUi("admin_dashboard.ui", self)
+        uic.loadUi(r"C:\Users\TOP\Desktop\Graduation Project\G_project\admin_dashboard.ui", self)
 
         # ربط الأزرار من الواجهة
         self.addEmployeeBtn.clicked.connect(self.open_add_user_window)
@@ -38,8 +38,8 @@ class AdminWindow(QMainWindow):
                 phone,
                 status,
                 role.role_name
-            FROM users
-            JOIN role ON users.role_id = role.role_id
+            FROM cms.users
+            JOIN cms.role ON cms.users.role_id = cms.role.role_id
             """)
 
         result = self.db.cur.fetchall()
@@ -78,14 +78,17 @@ class AdminWindow(QMainWindow):
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QScrollArea, QGridLayout,
-    QTableWidget, QTableWidgetItem, QHeaderView, QDialog, QMessageBox
+    QTableWidget, QTableWidgetItem, QHeaderView, QDialog, QMessageBox,
+    QCheckBox, QHBoxLayout, QMainWindow
 )
 from PyQt5.QtCore import Qt
+from PyQt5 import uic
 import os
 import shutil
 from docx import Document
 from db import DataBase
 from datetime import date
+
 
 class UserWindow(QMainWindow):
     def __init__(self, current_user_id):
@@ -93,11 +96,10 @@ class UserWindow(QMainWindow):
         self.current_user_id = current_user_id
         self.db = DataBase()
 
-        # Load the new UI
+        # Load the UI
         uic.loadUi("employee.ui", self)
         
-        # Apply the same logic as test.py for font application if needed, 
-        # or rely on the UI file's stylesheet + global font loading in app.py
+
         self.setStyleSheet("""
         * {
             font-family: "Alyamama", "Segoe UI Symbol";
@@ -105,30 +107,154 @@ class UserWindow(QMainWindow):
         }
         """)
 
-        # Connect Buttons
-        # Note: In the new UI, the buttons are named 'add_case' and 'docments' (typo in UI file acknowledged)
         self.add_case.clicked.connect(self.new_case_dialog)
         self.docments.clicked.connect(self.show_documents)
         self.logoutBtn.clicked.connect(self.log_out)
-        
-        # The scroll area and stacked widget are now in the UI file.
-        # Structure: self.mainStack -> (page_empty, page_documents)
-        # self.page_documents -> scrollArea -> files_widget -> files_grid
-        
-        # Ensure we start at the empty page
+        self.master_record.clicked.connect(self.show_master_record)
+        self.btn_scheduling.clicked.connect(self.show_scheduling)
+        self.btn_save_session.clicked.connect(self.save_session)
+
+
         if hasattr(self, 'mainStack'):
-             self.mainStack.setCurrentIndex(0)
-             
-        # Force alignment on the grid layout to prevent items from expanding to fill the whole area
+            self.mainStack.setCurrentIndex(0)
+
         if hasattr(self, 'files_grid'):
             self.files_grid.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
+    def show_master_record(self):
+        # 1. جلب بيانات سجل الأساس من قاعدة البيانات
+        db = DataBase()
+        db.cur.execute("""
+            SELECT cc.case_id, c.plaintiff_name,c.defendant_name, ct.case_type, ct.filing_date, ct.status
+            FROM cms.case_client cc
+            JOIN cms.client c ON cc.client_id = c.client_id
+            JOIN cms.court_case ct ON cc.case_id = ct.case_id
+            ORDER BY ct.filing_date DESC
+        """)
+        records = db.cur.fetchall()
+        db.close()
+
+        # 2. تعبئة الجدول
+        table = self.masterRecordTable  # هذا اسم الـ QTableWidget في الصفحة الجديدة
+        table.verticalHeader().setVisible(False)
+        table.setRowCount(len(records))
+        for row_idx, row_data in enumerate(records):
+            for col_idx, value in enumerate(row_data):
+                table.setItem(row_idx, col_idx, QTableWidgetItem(str(value)))
+
+        # 3. عرض الصفحة في الـ stacked widget
+        self.mainStack.setCurrentWidget(self.page_master_record)
+
+    def show_scheduling(self):
+        self.mainStack.setCurrentWidget(self.page_scheduling)
+        # Populate table
+        # Fetch cases that do NOT have a 'Scheduled' session
+        db = DataBase()
+        db.cur.execute("""
+            SELECT cc.case_id, c.plaintiff_name, c.defendant_name, ct.case_type
+            FROM cms.case_client cc
+            JOIN cms.client c ON cc.client_id = c.client_id
+            JOIN cms.court_case ct ON cc.case_id = ct.case_id
+            WHERE cc.case_id NOT IN (
+                SELECT case_id FROM cms.session WHERE status = 'Scheduled'
+            )
+            ORDER BY ct.filing_date DESC
+        """)
+        records = db.cur.fetchall()
+        db.close()
+        
+        table = self.schedulingTable
+        table.setRowCount(0)
+        table.verticalHeader().setVisible(False)
+        table.setRowCount(len(records))
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        
+        self.scheduling_checkboxes = [] 
+        
+        for row, data in enumerate(records):
+            # Checkbox in col 0
+            chk = QCheckBox()
+            cell_widget = QWidget()
+            layout = QHBoxLayout(cell_widget)
+            layout.addWidget(chk)
+            layout.setAlignment(Qt.AlignCenter)
+            layout.setContentsMargins(0,0,0,0)
+            table.setCellWidget(row, 0, cell_widget)
+            self.scheduling_checkboxes.append((chk, data[0])) # Store case_id
+            
+            # Data cols
+            table.setItem(row, 1, QTableWidgetItem(str(data[0])))
+            table.setItem(row, 2, QTableWidgetItem(str(data[1])))
+            table.setItem(row, 3, QTableWidgetItem(str(data[2])))
+            table.setItem(row, 4, QTableWidgetItem(str(data[3])))
+
+        # Populate Judge Combo
+        self.judgeComboBox.clear()
+        self.judgeComboBox.addItem("اختر القاضي")
+        db = DataBase()
+        db.cur.execute("SELECT user_id, full_name FROM cms.users WHERE role_id = 4")
+        judges = db.cur.fetchall()
+        db.close()
+        for judge in judges:
+            self.judgeComboBox.addItem(judge[1], judge[0])
+
+    def save_session(self):
+        selected_case_id = None
+        if not hasattr(self, 'scheduling_checkboxes'):
+             return
+
+        for chk, case_id in self.scheduling_checkboxes:
+            if chk.isChecked():
+                selected_case_id = case_id
+                break
+        
+        if not selected_case_id:
+            QMessageBox.warning(self, "تنبيه", "الرجاء اختيار قضية")
+            return
+            
+        # Get Judge ID
+        judge_id = self.judgeComboBox.currentData()
+        if not judge_id:
+            QMessageBox.warning(self, "تنبيه", "الرجاء اختيار القاضي")
+            return
+
+        session_date = self.sessionDateInput.date().toString("yyyy-MM-dd")
+        session_time = self.sessionTimeInput.time().toString("HH:mm")
+        
+        db = DataBase()
+        try:
+            # Check for conflict
+            db.cur.execute("""
+                SELECT count(*) FROM cms.session 
+                WHERE judge_id = %s AND session_date = %s AND session_time = %s AND status = 'Scheduled'
+            """, (judge_id, session_date, session_time))
+            conflict_count = db.cur.fetchone()[0]
+            
+            if conflict_count > 0:
+                QMessageBox.warning(self, "تنبيه", "يوجد جلسة أخرى لهذا القاضي في نفس الموعد!")
+                return
+
+            db.cur.execute("""
+                INSERT INTO cms.session (session_date, session_time, status, case_id, judge_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (session_date, session_time, 'Scheduled', selected_case_id, judge_id))
+            db.conn.commit()
+            QMessageBox.information(self, "نجاح", "تم حفظ الجلسة بنجاح")
+            
+            # Refresh the table
+            self.show_scheduling()
+            
+        except Exception as e:
+             QMessageBox.critical(self, "خطأ", f"حدث خطأ أثناء الحفظ: {e}")
+        finally:
+            db.close()
+
+
+            
     def show_documents(self):
         if hasattr(self, 'mainStack'):
-            self.mainStack.setCurrentIndex(1) # Show documents page
+            self.mainStack.setCurrentIndex(1)
 
-        # Clear existing
-        # Note: files_grid is loaded from UI
         if hasattr(self, 'files_grid'):
             for i in reversed(range(self.files_grid.count())):
                 widget = self.files_grid.itemAt(i).widget()
@@ -147,12 +273,7 @@ class UserWindow(QMainWindow):
         db.close()
 
         row = col = 0
-        
-        # If no files, maybe switch back to empty? Or show empty grid?
-        # User said "when the button clicked to apper", implying if clicked it should show. 
-        # But if empty list, page_empty might be better? 
-        # Stick to showing the page, even if empty.
-        
+
         for (file_path,) in files:
             card = QWidget()
             card.setStyleSheet("background-color: white; border-radius: 10px; padding: 10px;")
@@ -167,7 +288,7 @@ class UserWindow(QMainWindow):
             name.setWordWrap(True)
             name.setStyleSheet("color: black; border: none;")
 
-            open_btn = QPushButton("Open")
+            open_btn = QPushButton("فتح")
             open_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #452829; 
@@ -199,98 +320,114 @@ class UserWindow(QMainWindow):
             if os.path.exists(abs_path):
                 os.startfile(abs_path)
             else:
-                QMessageBox.warning(self, "Error", f"File not found at:\n{abs_path}")
+                QMessageBox.warning(self, "خطأ", f"الملف غير موجود:\n{abs_path}")
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Could not open file: {e}")
-            
+            QMessageBox.warning(self, "خطأ", f"تعذر فتح الملف: {e}")
+
     def log_out(self):
         self.close()
 
-
-    # ================= NEW CASE =================
+    # ================= إنشاء القضايا =================
     def new_case_dialog(self):
         db = DataBase()
-
-        # جلب كل العملاء
         db.cur.execute("""
-            SELECT client_id, plaintiff_name, case_type
+            SELECT client_id, plaintiff_name, defendant_name, case_type
             FROM cms.client
         """)
         clients = db.cur.fetchall()
         db.close()
 
         if not clients:
-            QMessageBox.information(self, "Info", "No clients found in the database.")
+            QMessageBox.information(self, "تنبيه", "لا توجد عملاء في قاعدة البيانات بعد.")
             return
 
         dialog = QDialog(self)
-        dialog.setWindowTitle("Create New Case")
-        dialog.setFixedSize(450, 300)
+        dialog.setWindowTitle("إنشاء قضية جديدة")
+        dialog.setFixedSize(550, 350)
         layout = QVBoxLayout(dialog)
 
-        label = QLabel("اختر لائحة الدعوى:")
+        # واجهة من اليمين لليسار
+        dialog.setLayoutDirection(Qt.RightToLeft)
+
+        label = QLabel("اختر القضايا:")
         layout.addWidget(label)
 
-        # جدول اختيار العميل
         table = QTableWidget()
-        table.setColumnCount(2)
-        table.setHorizontalHeaderLabels(["Client Name", "Case Type"])
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(["اختيار", "المدعي", "المدعى عليه", "نوع القضية"])
         table.setRowCount(len(clients))
         table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table.setLayoutDirection(Qt.RightToLeft)  # RTL للجدول
+
+        checkboxes = []
 
         for row, client in enumerate(clients):
-            client_id, name, case_type = client
-            table.setItem(row, 0, QTableWidgetItem(name))
-            table.setItem(row, 1, QTableWidgetItem(case_type))
+            client_id, plaintiff_name, defendant_name, case_type = client
+
+            checkbox = QCheckBox()
+            checkbox_widget = QWidget()
+            cb_layout = QHBoxLayout(checkbox_widget)
+            cb_layout.addWidget(checkbox)
+            cb_layout.setAlignment(Qt.AlignCenter)
+            cb_layout.setContentsMargins(0, 0, 0, 0)
+            table.setCellWidget(row, 0, checkbox_widget)
+            checkboxes.append(checkbox)
+
+            table.setItem(row, 1, QTableWidgetItem(plaintiff_name))
+            table.setItem(row, 2, QTableWidgetItem(defendant_name))
+            table.setItem(row, 3, QTableWidgetItem(case_type))
+
         layout.addWidget(table)
 
-        save_btn = QPushButton("Create Case")
+        save_btn = QPushButton("إنشاء القضايا")
         layout.addWidget(save_btn)
 
         def create_case():
-            selected_rows = table.selectionModel().selectedRows()
-            if not selected_rows:
-                QMessageBox.warning(dialog, "Warning", "اختر لائحة أولاً")
-                return
-            row_idx = selected_rows[0].row()
-            client_id, name, case_type = clients[row_idx]
+            selected_rows = [i for i, cb in enumerate(checkboxes) if cb.isChecked()]
 
-            # 1️⃣ إنشاء رقم القضية
-            case_number = f"CASE-{date.today().strftime('%Y%m%d')}-{row_idx+1}"
-            filing_date = date.today()
-            status = "Open"
+            # i=> # الصف المحدد
+            # cb=> # خانة الاختيار
+
+            if not selected_rows:
+                QMessageBox.warning(dialog, "تنبيه", "اختر قضية واحدة على الأقل")
+                return
 
             db = DataBase()
-            # 2️⃣ إدراج القضية
-            db.cur.execute("""
-                INSERT INTO cms.court_case (case_type, case_number, status, filing_date, created_by)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING case_id
-            """, (case_type, case_number, status, filing_date, self.current_user_id))
-            new_case_id = db.cur.fetchone()[0]
 
-            # 3️⃣ ربط العميل بالقضية في case_client
-            db.cur.execute("""
-                INSERT INTO cms.case_client (case_id, client_id, role_in_case)
-                VALUES (%s, %s, %s)
-            """, (new_case_id, client_id, "Plaintiff"))
+            for idx in selected_rows:
+                client_id, plaintiff_name, defendant_name, case_type = clients[idx]
 
-            # 4️⃣ ربط المستندات بالقضية حسب case_type
-            db.cur.execute("""
-                UPDATE cms.document
-                SET case_id = %s
-                WHERE uploaded_by = %s AND case_id IS NULL AND document_type = %s
-            """, (new_case_id, self.current_user_id, case_type))
+                case_number = f"CASE-{date.today().strftime('%Y%m%d')}-{idx + 1}"
+                filing_date = date.today()
+                status = "مفتوحة"
+
+                db.cur.execute("""
+                    INSERT INTO cms.court_case (case_type, case_number, status, filing_date, created_by)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING case_id
+                """, (case_type, case_number, status, filing_date, self.current_user_id))
+                new_case_id = db.cur.fetchone()[0]
+
+                db.cur.execute("""
+                    INSERT INTO cms.case_client (case_id, client_id, role_in_case)
+                    VALUES (%s, %s, %s)
+                """, (new_case_id, client_id, "Plaintiff"))
+
+                db.cur.execute("""
+                    UPDATE cms.document
+                    SET case_id = %s
+                    WHERE uploaded_by = %s AND case_id IS NULL AND document_type = %s
+                """, (new_case_id, self.current_user_id, case_type))
 
             db.conn.commit()
             db.close()
 
-            QMessageBox.information(dialog, "Success", f"Case created successfully with ID {new_case_id}")
+            QMessageBox.information(dialog, "نجاح", f"تم إنشاء {len(selected_rows)} قضية بنجاح ✅")
             dialog.accept()
+
 
         save_btn.clicked.connect(create_case)
         dialog.exec_()
-
 
 
 
@@ -303,7 +440,7 @@ class AddUserWindow(QMainWindow):
         # جلب البيانات من جدول role
         self.db = DataBase()
         self.role_combo.clear()
-        self.db.cur.execute("SELECT role_id, role_name FROM role")
+        self.db.cur.execute("SELECT role_id, role_name FROM cms.role")
         roles = self.db.cur.fetchall()
         for role in roles:
             role_id, role_name = role
@@ -360,7 +497,7 @@ class AddUserWindow(QMainWindow):
         # إدخال الموظف في قاعدة البيانات
         user_id = random.randint(20260000, 20269999)
         self.db.cur.execute(
-            "INSERT INTO users (user_id, username, password, full_name, email, phone, status, role_id) "
+            "INSERT INTO cms.users (user_id, username, password, full_name, email, phone, status, role_id) "
             "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
             (user_id, username, password, full_name, email, phone, status, role_id)
         )
@@ -544,7 +681,7 @@ class Petition_Clerks(QMainWindow):
             
              # Save to DB
             db = DataBase()
-            case_id = 1 
+            case_id = None 
             db.cur.execute("""
                 INSERT INTO cms.document (document_type, file_path, uploaded_by,case_id)
                 VALUES (%s, %s, %s, %s)

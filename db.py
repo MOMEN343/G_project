@@ -6,10 +6,10 @@ class DataBase:
     def __init__(self): 
         self.conn = psycopg2.connect(
             host="localhost",
-            port=1234,
+            port=5432,
             database="g_project",
             user="postgres",
-            password="2052005"
+            password="2002"
         )
         self.cur = self.conn.cursor()
         self.create_tables()
@@ -120,13 +120,13 @@ class DataBase:
         -- =====================
         CREATE TABLE IF NOT EXISTS cms.document (
             document_id SERIAL PRIMARY KEY,
-            document_type VARCHAR(50),
-            file_path TEXT NOT NULL,
-            upload_date DATE DEFAULT CURRENT_DATE,
-            case_id INT NOT NULL,
-            uploaded_by INT NOT NULL,
-            FOREIGN KEY (case_id) REFERENCES cms.court_case(case_id),
-            FOREIGN KEY (uploaded_by) REFERENCES cms.users(user_id)
+            document_type VARCHAR(50),         -- نوع المستند
+            file_path TEXT NOT NULL,           -- مسار الملف
+            upload_date DATE DEFAULT CURRENT_DATE,  -- تاريخ الرفع
+            uploaded_by INT NOT NULL,          -- الموظف الذي رفع المستند
+            case_id INT,                       -- رقم القضية، يمكن تركه فارغ عند رفع المستند قبل إنشاء القضية
+            FOREIGN KEY (uploaded_by) REFERENCES cms.users(user_id),
+            FOREIGN KEY (case_id) REFERENCES cms.court_case(case_id)
         );
 
         -- =====================
