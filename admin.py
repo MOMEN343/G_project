@@ -104,6 +104,16 @@ class UserWindow(QMainWindow):
             font-family: "Alyamama", "Segoe UI Symbol";
             color: #452829;
         }
+        QLineEdit {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px;
+            background-color: white;
+        }
+        QLineEdit:focus {
+            border: 1px solid #452829;
+            background-color: #fcfcfc;
+        }
         """)
 
         # Connect Buttons
@@ -134,10 +144,9 @@ class UserWindow(QMainWindow):
             # Initial check
             self.update_badge()
 
-        # The scroll area and stacked widget are now in the UI file.
-        # Structure: self.mainStack -> (page_empty, page_documents)
-        # self.page_documents -> scrollArea -> files_widget -> files_grid
-        
+        # Input validation styles
+
+
         # Ensure we start at the empty page
         if hasattr(self, 'mainStack'):
              self.mainStack.setCurrentIndex(0)
@@ -167,22 +176,20 @@ class UserWindow(QMainWindow):
             print(f"Error checking notifications: {e}")
 
     def show_notifications(self):
-        # Fetch notifications
+        # Fetch notifications - ONLY UNREAD
         db = DataBase()
         db.cur.execute("""
-            SELECT notification_id, message, created_at 
+            SELECT notification_id, message, created_at, document_id 
             FROM cms.notification 
-            WHERE user_id = %s 
+            WHERE user_id = %s AND is_read = FALSE
             ORDER BY created_at DESC
             LIMIT 10
         """, (self.current_user_id,))
         notifications = db.cur.fetchall()
         
-        # Mark as read (optional: mark all visualized, or just when clicked? Usually opening drawer marks them read)
-        # Marking all fetched as read for simplicity as per common UX for simple dropdowns
+        # Mark as read immediately when list is opened
         if notifications:
             ids = tuple([n[0] for n in notifications])
-            # If only 1 item, tuple([1]) is (1,), syntax is correct for IN
             if len(ids) == 1:
                 db.cur.execute("UPDATE cms.notification SET is_read = TRUE WHERE notification_id = %s", (ids[0],))
             else:
@@ -207,13 +214,13 @@ class UserWindow(QMainWindow):
 
         if not notifications:
             action = QWidgetAction(menu)
-            lbl = QLabel("No new notifications")
+            lbl = QLabel("لا توجد إشعارات جديدة") # No new notifications
             lbl.setStyleSheet("color: #f3e8df; padding: 10px;")
             lbl.setAlignment(Qt.AlignCenter)
             action.setDefaultWidget(lbl)
             menu.addAction(action)
         else:
-            for notif_id, msg, created_at in notifications:
+            for notif_id, msg, created_at, doc_id in notifications:
                 # Format time HH:MM AM/PM
                 time_str = created_at.strftime("%I:%M %p")
                 
@@ -238,6 +245,13 @@ class UserWindow(QMainWindow):
                 
                 action = QWidgetAction(menu)
                 action.setDefaultWidget(item_widget)
+                
+                # Handle Click
+                if doc_id:
+                     # Connect triggered to a lambda that calls handle_click
+                     # We use default arg d=doc_id to capture current value
+                     action.triggered.connect(lambda checked, d=doc_id: self.handle_notification_click(d))
+                
                 menu.addAction(action)
                 
                 # Separator
@@ -246,7 +260,10 @@ class UserWindow(QMainWindow):
         # Show menu under the button
         menu.exec_(self.notification.mapToGlobal(QPoint(0, self.notification.height())))
 
-    def show_documents(self):
+    def handle_notification_click(self, document_id):
+        self.show_documents(highlight_id=document_id)
+
+    def show_documents(self, highlight_id=None):
         if hasattr(self, 'mainStack'):
             self.mainStack.setCurrentIndex(1) # Show documents page
 
@@ -260,7 +277,7 @@ class UserWindow(QMainWindow):
 
         db = DataBase()
         db.cur.execute("""
-            SELECT d.file_path
+            SELECT d.file_path, d.document_id
             FROM cms.file_transfer ft
             JOIN cms.document d ON ft.document_id = d.document_id
             WHERE ft.receiver_id = %s
@@ -271,26 +288,34 @@ class UserWindow(QMainWindow):
 
         row = col = 0
         
-        # If no files, maybe switch back to empty? Or show empty grid?
-        # User said "when the button clicked to apper", implying if clicked it should show. 
-        # But if empty list, page_empty might be better? 
-        # Stick to showing the page, even if empty.
-        
-        for (file_path,) in files:
+        for (file_path, doc_id) in files:
             card = QWidget()
-            card.setStyleSheet("background-color: white; border-radius: 10px; padding: 10px;")
+            
+            # Check highlight
+            if highlight_id and doc_id == highlight_id:
+                # Highlight Style
+                card.setStyleSheet("""
+                    background-color: #fff8e1; 
+                    border: 2px solid #ff9800; 
+                    border-radius: 10px; 
+                    padding: 10px;
+                """)
+            else:
+                # Normal Style
+                card.setStyleSheet("background-color: white; border-radius: 10px; padding: 10px;")
+
             card_layout = QVBoxLayout(card)
 
             icon = QLabel("📄")
             icon.setAlignment(Qt.AlignCenter)
-            icon.setStyleSheet("font-size: 40px; border: none;")
+            icon.setStyleSheet("font-size: 40px; border: none; background: transparent;")
 
             name = QLabel(os.path.basename(file_path))
             name.setAlignment(Qt.AlignCenter)
             name.setWordWrap(True)
-            name.setStyleSheet("color: black; border: none;")
+            name.setStyleSheet("color: black; border: none; background: transparent;")
 
-            open_btn = QPushButton("Open")
+            open_btn = QPushButton("فتح")
             open_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #452829; 
@@ -730,12 +755,12 @@ class Petition_Clerks(QMainWindow):
 
         # 2. Generate File
         template_name = self.current_case_data.get("template", "nafqa.docx")
-        template_path = f"./file/{template_name}" 
+        template_path = f"./files/{template_name}" 
         if not os.path.exists(template_path):
             QMessageBox.warning(self, "Error", "Original template not found!")
             return
 
-        final_dir = os.path.abspath("./file")
+        final_dir = os.path.abspath("./files")
         os.makedirs(final_dir, exist_ok=True)
         # Sanitize filename: Use Case Type and Plaintiff Name
         case_type_safe = self.current_case_type.replace("/", "-").replace("\\", "-")
@@ -830,9 +855,9 @@ class Petition_Clerks(QMainWindow):
             notification_msg = f"({self.current_case_type} - \"{self.plaintiff_name.text().strip()}\" جديد)"
             db = DataBase()
             db.cur.execute("""
-                INSERT INTO cms.notification (message, user_id, created_at)
-                VALUES (%s, %s, NOW())
-            """, (notification_msg, receiver_id))
+                INSERT INTO cms.notification (message, user_id, created_at, document_id)
+                VALUES (%s, %s, NOW(), %s)
+            """, (notification_msg, receiver_id, self.document_id))
             db.conn.commit()
             db.close()
         except Exception as e:
