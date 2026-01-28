@@ -13,7 +13,7 @@ class AdminWindow(QMainWindow):
         super().__init__()
         self.db = DataBase()
 
-        uic.loadUi(r"C:\Users\TOP\Desktop\Graduation Project\G_project\admin_dashboard.ui", self)
+        uic.loadUi("admin_dashboard.ui", self)
 
         # ربط الأزرار من الواجهة
         self.addEmployeeBtn.clicked.connect(self.open_add_user_window)
@@ -79,16 +79,14 @@ class AdminWindow(QMainWindow):
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QScrollArea, QGridLayout,
     QTableWidget, QTableWidgetItem, QHeaderView, QDialog, QMessageBox,
-    QCheckBox, QHBoxLayout, QMainWindow
+    QMenu, QWidgetAction, QFrame, QHBoxLayout, QCheckBox
 )
-from PyQt5.QtCore import Qt
-from PyQt5 import uic
+from PyQt5.QtCore import Qt, QPoint, QTimer
 import os
 import shutil
 from docx import Document
 from db import DataBase
 from datetime import date
-
 
 class UserWindow(QMainWindow):
     def __init__(self, current_user_id):
@@ -96,10 +94,11 @@ class UserWindow(QMainWindow):
         self.current_user_id = current_user_id
         self.db = DataBase()
 
-        # Load the UI
+        # Load the new UI
         uic.loadUi("employee.ui", self)
         
-
+        # Apply the same logic as test.py for font application if needed, 
+        # or rely on the UI file's stylesheet + global font loading in app.py
         self.setStyleSheet("""
         * {
             font-family: "Alyamama", "Segoe UI Symbol";
@@ -107,19 +106,228 @@ class UserWindow(QMainWindow):
         }
         """)
 
+        # Connect Buttons
+        # Note: In the new UI, the buttons are named 'add_case' and 'docments' (typo in UI file acknowledged)
         self.add_case.clicked.connect(self.new_case_dialog)
         self.docments.clicked.connect(self.show_documents)
         self.logoutBtn.clicked.connect(self.log_out)
         self.master_record.clicked.connect(self.show_master_record)
         self.btn_scheduling.clicked.connect(self.show_scheduling)
         self.btn_save_session.clicked.connect(self.save_session)
+        
+        if hasattr(self, 'notification'):
+            self.notification.clicked.connect(self.show_notifications)
+        
+        # --- Notification Badge ---
+        # The badge is now defined in the UI file as 'badge_label'
+        # We need to re-parent it to the notification button to get the "overlay" effect
+        if hasattr(self, 'notification') and hasattr(self, 'badge_label'):
+            # Reparent to ensure it sits 'on top' or 'inside' the button's coordinate system
+            self.badge_label.setParent(self.notification)
+            self.badge_label.move(25, 5) # Adjust position
+            
+            # Timer to check for notifications
+            self.timer = QTimer(self)
+            self.timer.timeout.connect(self.update_badge)
+            self.timer.start(5000) # Check every 5 seconds
+            
+            # Initial check
+            self.update_badge()
 
-
+        # The scroll area and stacked widget are now in the UI file.
+        # Structure: self.mainStack -> (page_empty, page_documents)
+        # self.page_documents -> scrollArea -> files_widget -> files_grid
+        
+        # Ensure we start at the empty page
         if hasattr(self, 'mainStack'):
-            self.mainStack.setCurrentIndex(0)
-
+             self.mainStack.setCurrentIndex(0)
+             
+        # Force alignment on the grid layout to prevent items from expanding to fill the whole area
         if hasattr(self, 'files_grid'):
             self.files_grid.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+
+        self.showMaximized()
+
+    def update_badge(self):
+        try:
+            db = DataBase()
+            db.cur.execute("""
+                SELECT COUNT(*) FROM cms.notification 
+                WHERE user_id = %s AND is_read = FALSE
+            """, (self.current_user_id,))
+            count = db.cur.fetchone()[0]
+            db.close()
+
+            if count > 0:
+                self.badge_label.setText(str(count) if count < 10 else "9+")
+                self.badge_label.show()
+            else:
+                self.badge_label.hide()
+        except Exception as e:
+            print(f"Error checking notifications: {e}")
+
+    def show_notifications(self):
+        # Fetch notifications
+        db = DataBase()
+        db.cur.execute("""
+            SELECT notification_id, message, created_at 
+            FROM cms.notification 
+            WHERE user_id = %s 
+            ORDER BY created_at DESC
+            LIMIT 10
+        """, (self.current_user_id,))
+        notifications = db.cur.fetchall()
+        
+        # Mark as read (optional: mark all visualized, or just when clicked? Usually opening drawer marks them read)
+        # Marking all fetched as read for simplicity as per common UX for simple dropdowns
+        if notifications:
+            ids = tuple([n[0] for n in notifications])
+            # If only 1 item, tuple([1]) is (1,), syntax is correct for IN
+            if len(ids) == 1:
+                db.cur.execute("UPDATE cms.notification SET is_read = TRUE WHERE notification_id = %s", (ids[0],))
+            else:
+                db.cur.execute("UPDATE cms.notification SET is_read = TRUE WHERE notification_id IN %s", (ids,))
+            db.conn.commit()
+        
+        db.close()
+        
+        # Update badge immediately
+        self.update_badge()
+
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #452829;
+                color: white;
+                border: 1px solid #f3db93;
+                border-radius: 10px;
+                padding: 10px;
+            }
+        """)
+
+        if not notifications:
+            action = QWidgetAction(menu)
+            lbl = QLabel("No new notifications")
+            lbl.setStyleSheet("color: #f3e8df; padding: 10px;")
+            lbl.setAlignment(Qt.AlignCenter)
+            action.setDefaultWidget(lbl)
+            menu.addAction(action)
+        else:
+            for notif_id, msg, created_at in notifications:
+                # Format time HH:MM AM/PM
+                time_str = created_at.strftime("%I:%M %p")
+                
+                # Custom Widget for Notification Item
+                item_widget = QWidget()
+                item_widget.setStyleSheet("background-color: transparent;")
+                item_layout = QHBoxLayout(item_widget)
+                item_layout.setContentsMargins(5, 5, 5, 5)
+                
+                # Message Label
+                msg_label = QLabel(msg)
+                msg_label.setStyleSheet("color: white; font-weight: bold; font-family: 'Alyamama'; font-size: 14px;")
+                msg_label.setWordWrap(True)
+                
+                # Time Label
+                time_label = QLabel(time_str)
+                time_label.setStyleSheet("color: #f3db93; font-size: 12px;")
+                time_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+                item_layout.addWidget(msg_label)
+                item_layout.addWidget(time_label)
+                
+                action = QWidgetAction(menu)
+                action.setDefaultWidget(item_widget)
+                menu.addAction(action)
+                
+                # Separator
+                menu.addSeparator()
+
+        # Show menu under the button
+        menu.exec_(self.notification.mapToGlobal(QPoint(0, self.notification.height())))
+
+    def show_documents(self):
+        if hasattr(self, 'mainStack'):
+            self.mainStack.setCurrentIndex(1) # Show documents page
+
+        # Clear existing
+        # Note: files_grid is loaded from UI
+        if hasattr(self, 'files_grid'):
+            for i in reversed(range(self.files_grid.count())):
+                widget = self.files_grid.itemAt(i).widget()
+                if widget:
+                    widget.setParent(None)
+
+        db = DataBase()
+        db.cur.execute("""
+            SELECT d.file_path
+            FROM cms.file_transfer ft
+            JOIN cms.document d ON ft.document_id = d.document_id
+            WHERE ft.receiver_id = %s
+            ORDER BY ft.transfer_date DESC
+        """, (self.current_user_id,))
+        files = db.cur.fetchall()
+        db.close()
+
+        row = col = 0
+        
+        # If no files, maybe switch back to empty? Or show empty grid?
+        # User said "when the button clicked to apper", implying if clicked it should show. 
+        # But if empty list, page_empty might be better? 
+        # Stick to showing the page, even if empty.
+        
+        for (file_path,) in files:
+            card = QWidget()
+            card.setStyleSheet("background-color: white; border-radius: 10px; padding: 10px;")
+            card_layout = QVBoxLayout(card)
+
+            icon = QLabel("📄")
+            icon.setAlignment(Qt.AlignCenter)
+            icon.setStyleSheet("font-size: 40px; border: none;")
+
+            name = QLabel(os.path.basename(file_path))
+            name.setAlignment(Qt.AlignCenter)
+            name.setWordWrap(True)
+            name.setStyleSheet("color: black; border: none;")
+
+            open_btn = QPushButton("Open")
+            open_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #452829; 
+                    color: white; 
+                    border-radius: 5px;
+                    padding: 5px;
+                }
+                QPushButton:hover {
+                    background-color: #f3db93;
+                    color: black;
+                }
+            """)
+            open_btn.clicked.connect(lambda checked, p=file_path: self.open_file(p))
+
+            card_layout.addWidget(icon)
+            card_layout.addWidget(name)
+            card_layout.addWidget(open_btn)
+
+            self.files_grid.addWidget(card, row, col)
+
+            col += 1
+            if col == 4:
+                col = 0
+                row += 1
+
+    def open_file(self, file_path):
+        try:
+            abs_path = os.path.abspath(file_path)
+            if os.path.exists(abs_path):
+                os.startfile(abs_path)
+            else:
+                QMessageBox.warning(self, "Error", f"File not found at:\n{abs_path}")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Could not open file: {e}")
+            
+    def log_out(self):
+        self.close()
 
     def show_master_record(self):
         # 1. جلب بيانات سجل الأساس من قاعدة البيانات
@@ -250,184 +458,90 @@ class UserWindow(QMainWindow):
             db.close()
 
 
-            
-    def show_documents(self):
-        if hasattr(self, 'mainStack'):
-            self.mainStack.setCurrentIndex(1)
-
-        if hasattr(self, 'files_grid'):
-            for i in reversed(range(self.files_grid.count())):
-                widget = self.files_grid.itemAt(i).widget()
-                if widget:
-                    widget.setParent(None)
-
-        db = DataBase()
-        db.cur.execute("""
-            SELECT d.file_path
-            FROM cms.file_transfer ft
-            JOIN cms.document d ON ft.document_id = d.document_id
-            WHERE ft.receiver_id = %s
-            ORDER BY ft.transfer_date DESC
-        """, (self.current_user_id,))
-        files = db.cur.fetchall()
-        db.close()
-
-        row = col = 0
-
-        for (file_path,) in files:
-            card = QWidget()
-            card.setStyleSheet("background-color: white; border-radius: 10px; padding: 10px;")
-            card_layout = QVBoxLayout(card)
-
-            icon = QLabel("📄")
-            icon.setAlignment(Qt.AlignCenter)
-            icon.setStyleSheet("font-size: 40px; border: none;")
-
-            name = QLabel(os.path.basename(file_path))
-            name.setAlignment(Qt.AlignCenter)
-            name.setWordWrap(True)
-            name.setStyleSheet("color: black; border: none;")
-
-            open_btn = QPushButton("فتح")
-            open_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #452829; 
-                    color: white; 
-                    border-radius: 5px;
-                    padding: 5px;
-                }
-                QPushButton:hover {
-                    background-color: #f3db93;
-                    color: black;
-                }
-            """)
-            open_btn.clicked.connect(lambda checked, p=file_path: self.open_file(p))
-
-            card_layout.addWidget(icon)
-            card_layout.addWidget(name)
-            card_layout.addWidget(open_btn)
-
-            self.files_grid.addWidget(card, row, col)
-
-            col += 1
-            if col == 4:
-                col = 0
-                row += 1
-
-    def open_file(self, file_path):
-        try:
-            abs_path = os.path.abspath(file_path)
-            if os.path.exists(abs_path):
-                os.startfile(abs_path)
-            else:
-                QMessageBox.warning(self, "خطأ", f"الملف غير موجود:\n{abs_path}")
-        except Exception as e:
-            QMessageBox.warning(self, "خطأ", f"تعذر فتح الملف: {e}")
-
-    def log_out(self):
-        self.close()
-
-    # ================= إنشاء القضايا =================
+    # ================= NEW CASE =================
     def new_case_dialog(self):
         db = DataBase()
+
+        # جلب كل العملاء
         db.cur.execute("""
-            SELECT client_id, plaintiff_name, defendant_name, case_type
+            SELECT client_id, plaintiff_name, case_type
             FROM cms.client
         """)
         clients = db.cur.fetchall()
         db.close()
 
         if not clients:
-            QMessageBox.information(self, "تنبيه", "لا توجد عملاء في قاعدة البيانات بعد.")
+            QMessageBox.information(self, "Info", "No clients found in the database.")
             return
 
         dialog = QDialog(self)
-        dialog.setWindowTitle("إنشاء قضية جديدة")
-        dialog.setFixedSize(550, 350)
+        dialog.setWindowTitle("Create New Case")
+        dialog.setFixedSize(450, 300)
         layout = QVBoxLayout(dialog)
 
-        # واجهة من اليمين لليسار
-        dialog.setLayoutDirection(Qt.RightToLeft)
-
-        label = QLabel("اختر القضايا:")
+        label = QLabel("اختر لائحة الدعوى:")
         layout.addWidget(label)
 
+        # جدول اختيار العميل
         table = QTableWidget()
-        table.setColumnCount(4)
-        table.setHorizontalHeaderLabels(["اختيار", "المدعي", "المدعى عليه", "نوع القضية"])
+        table.setColumnCount(2)
+        table.setHorizontalHeaderLabels(["Client Name", "Case Type"])
         table.setRowCount(len(clients))
         table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        table.setLayoutDirection(Qt.RightToLeft)  # RTL للجدول
-
-        checkboxes = []
 
         for row, client in enumerate(clients):
-            client_id, plaintiff_name, defendant_name, case_type = client
-
-            checkbox = QCheckBox()
-            checkbox_widget = QWidget()
-            cb_layout = QHBoxLayout(checkbox_widget)
-            cb_layout.addWidget(checkbox)
-            cb_layout.setAlignment(Qt.AlignCenter)
-            cb_layout.setContentsMargins(0, 0, 0, 0)
-            table.setCellWidget(row, 0, checkbox_widget)
-            checkboxes.append(checkbox)
-
-            table.setItem(row, 1, QTableWidgetItem(plaintiff_name))
-            table.setItem(row, 2, QTableWidgetItem(defendant_name))
-            table.setItem(row, 3, QTableWidgetItem(case_type))
-
+            client_id, name, case_type = client
+            table.setItem(row, 0, QTableWidgetItem(name))
+            table.setItem(row, 1, QTableWidgetItem(case_type))
         layout.addWidget(table)
 
-        save_btn = QPushButton("إنشاء القضايا")
+        save_btn = QPushButton("Create Case")
         layout.addWidget(save_btn)
 
         def create_case():
-            selected_rows = [i for i, cb in enumerate(checkboxes) if cb.isChecked()]
-
-            # i=> # الصف المحدد
-            # cb=> # خانة الاختيار
-
+            selected_rows = table.selectionModel().selectedRows()
             if not selected_rows:
-                QMessageBox.warning(dialog, "تنبيه", "اختر قضية واحدة على الأقل")
+                QMessageBox.warning(dialog, "Warning", "اختر لائحة أولاً")
                 return
+            row_idx = selected_rows[0].row()
+            client_id, name, case_type = clients[row_idx]
+
+            # 1️⃣ إنشاء رقم القضية
+            case_number = f"CASE-{date.today().strftime('%Y%m%d')}-{row_idx+1}"
+            filing_date = date.today()
+            status = "Open"
 
             db = DataBase()
+            # 2️⃣ إدراج القضية
+            db.cur.execute("""
+                INSERT INTO cms.court_case (case_type, case_number, status, filing_date, created_by)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING case_id
+            """, (case_type, case_number, status, filing_date, self.current_user_id))
+            new_case_id = db.cur.fetchone()[0]
 
-            for idx in selected_rows:
-                client_id, plaintiff_name, defendant_name, case_type = clients[idx]
+            # 3️⃣ ربط العميل بالقضية في case_client
+            db.cur.execute("""
+                INSERT INTO cms.case_client (case_id, client_id, role_in_case)
+                VALUES (%s, %s, %s)
+            """, (new_case_id, client_id, "Plaintiff"))
 
-                case_number = f"CASE-{date.today().strftime('%Y%m%d')}-{idx + 1}"
-                filing_date = date.today()
-                status = "مفتوحة"
-
-                db.cur.execute("""
-                    INSERT INTO cms.court_case (case_type, case_number, status, filing_date, created_by)
-                    VALUES (%s, %s, %s, %s, %s)
-                    RETURNING case_id
-                """, (case_type, case_number, status, filing_date, self.current_user_id))
-                new_case_id = db.cur.fetchone()[0]
-
-                db.cur.execute("""
-                    INSERT INTO cms.case_client (case_id, client_id, role_in_case)
-                    VALUES (%s, %s, %s)
-                """, (new_case_id, client_id, "Plaintiff"))
-
-                db.cur.execute("""
-                    UPDATE cms.document
-                    SET case_id = %s
-                    WHERE uploaded_by = %s AND case_id IS NULL AND document_type = %s
-                """, (new_case_id, self.current_user_id, case_type))
+            # 4️⃣ ربط المستندات بالقضية حسب case_type
+            db.cur.execute("""
+                UPDATE cms.document
+                SET case_id = %s
+                WHERE uploaded_by = %s AND case_id IS NULL AND document_type = %s
+            """, (new_case_id, self.current_user_id, case_type))
 
             db.conn.commit()
             db.close()
 
-            QMessageBox.information(dialog, "نجاح", f"تم إنشاء {len(selected_rows)} قضية بنجاح ✅")
+            QMessageBox.information(dialog, "Success", f"Case created successfully with ID {new_case_id}")
             dialog.accept()
-
 
         save_btn.clicked.connect(create_case)
         dialog.exec_()
+
 
 
 
@@ -623,13 +737,11 @@ class Petition_Clerks(QMainWindow):
 
         final_dir = os.path.abspath("./file")
         os.makedirs(final_dir, exist_ok=True)
-        # Sanitize filename: Use only Client ID to avoid encoding issues on Windows
-        # Or if we must include name, ensure it works. But explicit ID is safest.
-        # Let's try to include name but stripped of problematic chars?
-        # The user's error showed mojibake, likely due to arabic.
-        # Safest is just ID or strict alphanumeric.
-        # Let's stick to ID + simple timestamp or just ID.
-        final_file = os.path.join(final_dir, f"final_{self.client_id}.docx")
+        # Sanitize filename: Use Case Type and Plaintiff Name
+        case_type_safe = self.current_case_type.replace("/", "-").replace("\\", "-")
+        plaintiff_name_safe = self.plaintiff_name.text().strip().replace("/", "-").replace("\\", "-")
+        filename = f"{case_type_safe} - {plaintiff_name_safe}.docx"
+        final_file = os.path.join(final_dir, filename)
         
         try:
             shutil.copy(template_path, final_file)
@@ -681,7 +793,7 @@ class Petition_Clerks(QMainWindow):
             
              # Save to DB
             db = DataBase()
-            case_id = None 
+            case_id = 1 
             db.cur.execute("""
                 INSERT INTO cms.document (document_type, file_path, uploaded_by,case_id)
                 VALUES (%s, %s, %s, %s)
@@ -709,22 +821,36 @@ class Petition_Clerks(QMainWindow):
 
             db.conn.commit()
             db.close()
-            QMessageBox.information(self, "Success", f"Client Registered, File Generated & Sent Successfully!")
-            
-            # Clear fields
-            self.plaintiff_name.clear()
-            self.plaintiff_national_id.clear()
-            self.plaintiff_phone.clear()
-            self.defendant_name.clear()
-            self.defendant_national_id.clear()
-            self.defendant_phone.clear()
-            self.defendant_address.clear()
-            self.comboBox.setCurrentIndex(0)
-            self.current_case_type = None
-            self.label_2.setText("أدخل بيانات لائحة الدعوى:")
-
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to send file: {str(e)}")
+            return
+
+        # 4. Create Notification
+        try:
+            notification_msg = f"({self.current_case_type} - \"{self.plaintiff_name.text().strip()}\" جديد)"
+            db = DataBase()
+            db.cur.execute("""
+                INSERT INTO cms.notification (message, user_id, created_at)
+                VALUES (%s, %s, NOW())
+            """, (notification_msg, receiver_id))
+            db.conn.commit()
+            db.close()
+        except Exception as e:
+            print(f"Failed to send notification: {e}") # Non-blocking error
+
+        QMessageBox.information(self, "Success", f"Client Registered, File Generated & Sent Successfully!")
+        
+        # Clear fields
+        self.plaintiff_name.clear()
+        self.plaintiff_national_id.clear()
+        self.plaintiff_phone.clear()
+        self.defendant_name.clear()
+        self.defendant_national_id.clear()
+        self.defendant_phone.clear()
+        self.defendant_address.clear()
+        self.comboBox.setCurrentIndex(0)
+        self.current_case_type = None
+        self.label_2.setText("أدخل بيانات لائحة الدعوى:")
 
     def log_out (self):
-        self.close() 
+        self.close()  

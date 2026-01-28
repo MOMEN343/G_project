@@ -14,7 +14,7 @@
    <cursorShape>ArrowCursor</cursorShape>
   </property>
   <property name="windowTitle">
-   <string>لوحة تحكم المدير</string>
+   <string>كاتب الضبط</string>
   </property>
   <property name="layoutDirection">
    <enum>Qt::LeftToRight</enum>
@@ -82,6 +82,34 @@ border-bottom: 3px solid white;
          </property>
          <property name="text">
           <string>🔔</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="badge_label">
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::RightToLeft</enum>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">
+            background-color: red;
+            color: white;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: bold;
+          </string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="fixedSize" stdset="0">
+          <size>
+           <width>16</width>
+           <height>16</height>
+          </size>
          </property>
         </widget>
        </item>
