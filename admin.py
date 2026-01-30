@@ -1,4 +1,5 @@
 import random
+import re
 from PyQt5 import uic,QtWidgets
 from PyQt5.QtWidgets import QWidget
 from db import DataBase
@@ -267,79 +268,156 @@ class UserWindow(QMainWindow):
         if hasattr(self, 'mainStack'):
             self.mainStack.setCurrentIndex(1) # Show documents page
 
-        # Clear existing
-        # Note: files_grid is loaded from UI
+        # Clear existing items in the grid
         if hasattr(self, 'files_grid'):
-            for i in reversed(range(self.files_grid.count())):
-                widget = self.files_grid.itemAt(i).widget()
+            # First, try to fix the layout if it was set to Grid previously but we want a list behavior
+            # straightforward way: use the grid as a vertical list (col 0 only)
+            
+            # Remove all widgets
+            while self.files_grid.count():
+                item = self.files_grid.takeAt(0)
+                widget = item.widget()
                 if widget:
-                    widget.setParent(None)
+                    widget.deleteLater()
+            
+            # Reset scaling or stretching if needed (optional but good practice)
+            # self.files_grid.setColumnStretch(0, 1)
 
         db = DataBase()
         db.cur.execute("""
-            SELECT d.file_path, d.document_id
+            SELECT d.file_path, d.document_id, n.created_at
             FROM cms.file_transfer ft
             JOIN cms.document d ON ft.document_id = d.document_id
+            LEFT JOIN cms.notification n ON d.document_id = n.document_id AND n.user_id = ft.receiver_id
             WHERE ft.receiver_id = %s
             ORDER BY ft.transfer_date DESC
         """, (self.current_user_id,))
         files = db.cur.fetchall()
         db.close()
 
-        row = col = 0
+        row_idx = 0
         
-        for (file_path, doc_id) in files:
-            card = QWidget()
+        for (file_path, doc_id, created_at) in files:
+            # Create a container widget for the row
+            row_widget = QWidget()
+            row_widget.setFixedHeight(80) # Fixed height for the row
             
-            # Check highlight
+            # Define Normal Style
+            normal_style = """
+                QWidget {
+                    background-color: white;
+                    border-bottom: 1px solid #e0e0e0;
+                }
+                QWidget:hover {
+                    background-color: #f9f9f9;
+                }
+            """
+            
+            # Apply styling
             if highlight_id and doc_id == highlight_id:
                 # Highlight Style
-                card.setStyleSheet("""
-                    background-color: #fff8e1; 
-                    border: 2px solid #ff9800; 
-                    border-radius: 10px; 
-                    padding: 10px;
-                """)
+                highlight_style = normal_style + """
+                QWidget {
+                    background-color: #fff8e1;
+                }
+                """
+                row_widget.setStyleSheet(highlight_style)
+                
+                # Auto-remove highlight after 3 seconds
+                QTimer.singleShot(3000, lambda w=row_widget: w.setStyleSheet(normal_style))
+                
             else:
-                # Normal Style
-                card.setStyleSheet("background-color: white; border-radius: 10px; padding: 10px;")
+                row_widget.setStyleSheet(normal_style)
 
-            card_layout = QVBoxLayout(card)
+            # Layout for the row
+            layout = QHBoxLayout(row_widget)
+            layout.setContentsMargins(20, 10, 20, 10)
+            layout.setSpacing(15)
 
+            # --- ELEMENTS ---
+            
+            # File Icon
             icon = QLabel("📄")
-            icon.setAlignment(Qt.AlignCenter)
-            icon.setStyleSheet("font-size: 40px; border: none; background: transparent;")
+            icon.setStyleSheet("font-size: 30px; background: transparent; border: none;")
+            
+            # File Name
+            file_name = os.path.basename(file_path)
+            name_label = QLabel(file_name)
+            name_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #333; background: transparent; border: none;")
+            name_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            
+            # Time Label (Replacing Document Type)
+            # Format time as HH:MM AM/PM
+            time_str = created_at.strftime("%I:%M %p") if created_at else ""
+            time_label = QLabel(time_str)
+            time_label.setStyleSheet("color: #777; font-size: 14px; background: transparent; border: none; font-family: 'Alyamama';")
+            time_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            
+            # Spacer to push buttons to the left
+            spacer = QWidget()
+            spacer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+            spacer.setStyleSheet("background: transparent; border: none;")
 
-            name = QLabel(os.path.basename(file_path))
-            name.setAlignment(Qt.AlignCenter)
-            name.setWordWrap(True)
-            name.setStyleSheet("color: black; border: none; background: transparent;")
-
-            open_btn = QPushButton("فتح")
-            open_btn.setStyleSheet("""
+            # Button: Extract Notification File
+            btn_extract = QPushButton("استخراج ملف التبليغ")
+            btn_extract.setCursor(Qt.PointingHandCursor)
+            btn_extract.setMinimumHeight(40)
+            btn_extract.setStyleSheet("""
                 QPushButton {
                     background-color: #452829; 
                     color: white; 
-                    border-radius: 5px;
-                    padding: 5px;
+                    border-radius: 5px; 
+                    padding: 5px 15px;
+                    border: none;
                 }
                 QPushButton:hover {
                     background-color: #f3db93;
                     color: black;
                 }
             """)
-            open_btn.clicked.connect(lambda checked, p=file_path: self.open_file(p))
+            btn_extract.clicked.connect(lambda checked, d=doc_id: self.extract_notification_file(d))
 
-            card_layout.addWidget(icon)
-            card_layout.addWidget(name)
-            card_layout.addWidget(open_btn)
+            # Button: Open
+            btn_open = QPushButton("فتح")
+            btn_open.setCursor(Qt.PointingHandCursor)
+            btn_open.setMinimumHeight(40)
+            btn_open.setStyleSheet("""
+                QPushButton {
+                    background-color: #452829; 
+                    color: white; 
+                    border-radius: 5px; 
+                    padding: 5px 20px;
+                    border: none;
+                }
+                QPushButton:hover {
+                    background-color: #f3db93;
+                    color: black;
+                }
+            """)
+            btn_open.clicked.connect(lambda checked, p=file_path: self.open_file(p))
 
-            self.files_grid.addWidget(card, row, col)
+            # Add widgets to layout (Order for RTL: Right -> Left)
+            layout.addWidget(icon)
+            layout.addWidget(name_label)
+            layout.addWidget(time_label)
+            layout.addWidget(spacer) # Pushes subsequent items to the left
+            layout.addWidget(btn_extract) # Will be to the left of spacer
+            layout.addWidget(btn_open)    # Will be to the left of extract btn (furthest left)
 
-            col += 1
-            if col == 4:
-                col = 0
-                row += 1
+            # Add row to grid (using it as a list)
+            self.files_grid.addWidget(row_widget, row_idx, 0)
+            row_idx += 1
+
+        # Push everything to the top by adding a vertical spacer at the end
+        if hasattr(self, 'files_grid'):
+             # Create a spacer item that expands vertically
+            vertical_spacer = QWidget()
+            vertical_spacer.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+            self.files_grid.addWidget(vertical_spacer, row_idx, 0)
+
+    def extract_notification_file(self, doc_id):
+        # Placeholder for extraction logic
+        QMessageBox.information(self, "استخراج", f"جارٍ استخراج ملف التبليغ للمستند رقم {doc_id}...")
 
     def open_file(self, file_path):
         try:
@@ -672,9 +750,9 @@ class Petition_Clerks(QMainWindow):
         
         # Case Configurations
         self.case_config = {
-            "case1": {"label": "نفقة زوجة", "template": "nafqa.docx"},
-            "case2": {"label": "عفش بيت", "template": "nafqa.docx"}, 
-            "case3": {"label": "مهر مؤجل", "template": "nafqa.docx"},
+            "case1": {"label": "نفقة زوجة", "template": "لائحة دعوى نفقة زوجة.docx"},
+            "case2": {"label": "عفش بيت", "template": "لائحة دعوى عفش بيت.docx"}, 
+            "case3": {"label": "مهر مؤجل", "template": "لائحة دعوى مهر مؤجل.docx"},
             "case4": {"label": "نفقة عفش غيابي", "template": "nafqa.docx"},
             "case5": {"label": "نفقة زوجة غيابي", "template": "nafqa.docx"},
             "case6": {"label": "نفقة صغار", "template": "nafqa.docx"},
@@ -702,7 +780,7 @@ class Petition_Clerks(QMainWindow):
                 # Usually text is better for readability unless there's an enum.
                 # using label for display and DB
                 self.current_case_type = self.current_case_data["label"] 
-                self.label_2.setText(f"أدخل بيانات {self.current_case_type}")
+                self.label_2.setText(f"أدخل بيانات لائحة دعوى {self.current_case_type}")
             else:
                 self.current_case_type = sender.text() # Fallback
                 self.current_case_data = {"label": sender.text(), "template": "nafqa.docx"}
@@ -734,8 +812,8 @@ class Petition_Clerks(QMainWindow):
             db = DataBase()
             db.cur.execute("""
                 INSERT INTO cms.client (client_id, plaintiff_name, plaintiff_national_id, plaintiff_phone,
-                                        defendant_name, defendant_national_id, defendant_phone, defendant_address, case_type)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                        defendant_name, defendant_national_id, defendant_phone, defendant_address, case_type, plaintiff_address)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 self.client_id,
                 self.plaintiff_name.text(),
@@ -745,7 +823,8 @@ class Petition_Clerks(QMainWindow):
                 self.defendant_national_id.text(),
                 self.defendant_phone.text(),
                 self.defendant_address.text(),
-                self.current_case_type 
+                self.current_case_type,
+                self.plaintiff_address.text()
             ))
             db.conn.commit()
             db.close()
@@ -778,11 +857,84 @@ class Petition_Clerks(QMainWindow):
             }
             day_in_arabic = days_map.get(date.today().strftime("%A"), date.today().strftime("%A"))
 
+            def replace_placeholders(doc, placeholders):
+                pl_name = placeholders.get("{PLAINTIFF_NAME}", "")
+                pl_addr = placeholders.get("{PLAINTIFF_ADDRESS}", "")
+                df_name = placeholders.get("{DEFENDANT_NAME}", "")
+                df_addr = placeholders.get("{DEFENDANT_ADDRESS}", "")
+
+                def process_p(p):
+                    text = p.text.strip()
+                    is_header_pl = text.startswith("المدعية/")
+                    is_header_df = text.startswith("المدعي عليه/") or text.startswith("المدعى عليه/")
+                    
+                    if (is_header_pl or is_header_df) and "ــــ" in text:
+                        # 1. Prepare address parts by splitting by '-'
+                        addr = pl_addr if is_header_pl else df_addr
+                        addr_parts = [part.strip() for part in addr.split('-')]
+                        from_val = addr_parts[0] if len(addr_parts) > 0 else addr
+                        residence_val = addr_parts[1] if len(addr_parts) > 1 else ""
+
+                        # 2. Merge underscore-only runs into previous runs to handle split blocks
+                        runs = p.runs
+                        for i in range(len(runs)-1, 0, -1):
+                            if re.fullmatch(r"[ـ\s\t]+", runs[i].text) and "ـ" in runs[i].text:
+                                runs[i-1].text += runs[i].text
+                                runs[i].text = ""
+
+                        # 3. Decide on replacements order: [Name, From, Residents]
+                        current_name = pl_name if is_header_pl else df_name
+                        repls = [current_name, from_val, residence_val]
+                        
+                        count = 0
+                        def repl_func(m):
+                            nonlocal count
+                            res = repls[count] if count < len(repls) else m.group(0)
+                            count += 1
+                            return res
+
+                        # 4. Replace in runs to PRESERVE FORMATTING
+                        for run in p.runs:
+                            if "ـ" in run.text:
+                                run.text = re.sub(r"ـ+", repl_func, run.text)
+                            
+                            for key, val in placeholders.items():
+                                if key in run.text:
+                                    run.text = run.text.replace(key, val)
+                    else:
+                        # 4. Standard placeholder replacement for other paragraphs
+                        for run in p.runs:
+                            for key, val in placeholders.items():
+                                if key in run.text:
+                                    run.text = run.text.replace(key, val)
+                            
+                            # Handle signature labels at the bottom
+                            # Match "المدعية" at the end of a run or line
+                            if run.text.strip() == "المدعية" and ("وحرر" in text or "الاحترام" in text):
+                                # If there are tabs before it, we try to preserve them for the name line
+                                prefix = re.match(r"^[\s\t]*", run.text).group(0)
+                                run.text = run.text.rstrip() + "\n" + prefix + pl_name
+                            
+                            if "المدعية /" in run.text:
+                                run.text = run.text.replace("المدعية /", "المدعية / " + pl_name)
+
+                # Apply to paragraphs
+                for p in doc.paragraphs:
+                    process_p(p)
+
+                # Apply to tables
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            for p in cell.paragraphs:
+                                process_p(p)
+
+            # Prepare placeholders
             placeholders = {
                 "{DATE_DAY}": day_in_arabic,
                 "{DATE_FULL}": date.today().strftime("%d/%m/%Y"),
                 "{PLAINTIFF_NAME}": self.plaintiff_name.text(),
-                "{PLAINTIFF_ADDRESS}": "غزة معسكر الشاطئ", 
+                "{PLAINTIFF_ADDRESS}": self.plaintiff_address.text(), 
                 "{LAWYER_NAME}": "معتصم كريزم",             
                 "{CLERK_NAME}": "مؤمن كريزم",               
                 "{DEFENDANT_NAME}": self.defendant_name.text(),
@@ -797,21 +949,6 @@ class Petition_Clerks(QMainWindow):
                 "{COURT_ADDRESS}": "غزة شارع النصر",        
                 "{SESSION_DATE}": "9/11/2021",              
             }
-
-            def replace_placeholders(doc, placeholders):
-                for p in doc.paragraphs:
-                    for run in p.runs:
-                        for key, val in placeholders.items():
-                            if key in run.text:
-                                run.text = run.text.replace(key, val)
-                for table in doc.tables:
-                    for row in table.rows:
-                        for cell in row.cells:
-                            for p in cell.paragraphs:
-                                for run in p.runs:
-                                    for key, val in placeholders.items():
-                                        if key in run.text:
-                                            run.text = run.text.replace(key, val)
 
             replace_placeholders(doc, placeholders)
             doc.save(final_file)
@@ -869,6 +1006,7 @@ class Petition_Clerks(QMainWindow):
         self.plaintiff_name.clear()
         self.plaintiff_national_id.clear()
         self.plaintiff_phone.clear()
+        self.plaintiff_address.clear()
         self.defendant_name.clear()
         self.defendant_national_id.clear()
         self.defendant_phone.clear()

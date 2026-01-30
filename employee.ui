@@ -97,7 +97,7 @@ border-bottom: 3px solid white;
           <string notr="true">
             background-color: red;
             color: white;
-            border-radius: 8px;
+            border-radius: 50%;
             font-size: 10px;
             font-weight: bold;
           </string>
@@ -248,18 +248,7 @@ border-bottom: 3px solid white;
               </property>
               <property name="styleSheet">
                <string notr="true">#scrollArea{
-border:5px solid;
-border-color: qradialgradient(spread: pad,
-    cx: 0.5, cy: 0.5,
-    radius: 0.7,
-    fx: 0.5, fy: 0.5,
-    stop: 0   rgba(69, 40, 41, 255),   /* #452829 */
-    stop: 0.2 rgba(69, 40, 41, 220),
-    stop: 0.35 rgba(120, 90, 70, 180),
-    stop: 0.5 rgba(180, 150, 100, 200),
-    stop: 0.65 rgba(243, 219, 147, 180), /* #f3db93 */
-    stop: 1   rgba(243, 219, 147, 0))
-
+border: none;
 }</string>
               </property>
               <property name="widgetResizable">
