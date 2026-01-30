@@ -911,9 +911,7 @@ class Petition_Clerks(QMainWindow):
                             # Handle signature labels at the bottom
                             # Match "المدعية" at the end of a run or line
                             if run.text.strip() == "المدعية" and ("وحرر" in text or "الاحترام" in text):
-                                # If there are tabs before it, we try to preserve them for the name line
-                                prefix = re.match(r"^[\s\t]*", run.text).group(0)
-                                run.text = run.text.rstrip() + "\n" + prefix + pl_name
+                                run.text = run.text.rstrip() + " / " + pl_name
                             
                             if "المدعية /" in run.text:
                                 run.text = run.text.replace("المدعية /", "المدعية / " + pl_name)
