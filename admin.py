@@ -911,10 +911,11 @@ class Petition_Clerks(QMainWindow):
                             # Handle signature labels at the bottom
                             # Match "المدعية" at the end of a run or line
                             if run.text.strip() == "المدعية" and ("وحرر" in text or "الاحترام" in text):
-                                run.text = run.text.rstrip() + " / " + pl_name
-                            
-                            if "المدعية /" in run.text:
-                                run.text = run.text.replace("المدعية /", "المدعية / " + pl_name)
+                                if pl_name not in run.text:
+                                    run.text = run.text.rstrip() + " / " + pl_name
+                            elif "المدعية /" in run.text:
+                                if pl_name not in run.text:
+                                    run.text = run.text.replace("المدعية /", "المدعية / " + pl_name)
 
                 # Apply to paragraphs
                 for p in doc.paragraphs:
