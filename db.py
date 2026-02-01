@@ -6,10 +6,10 @@ class DataBase:
     def __init__(self): 
         self.conn = psycopg2.connect(
             host="localhost",
-            port=1234,
+            port=5432,
             database="g_project",
             user="postgres",
-            password="2052005"
+            password ="2002"
         )
         self.cur = self.conn.cursor()
         self.create_tables()
@@ -120,13 +120,13 @@ class DataBase:
         -- =====================
         CREATE TABLE IF NOT EXISTS cms.document (
             document_id SERIAL PRIMARY KEY,
-            document_type VARCHAR(50),
-            file_path TEXT NOT NULL,
-            upload_date DATE DEFAULT CURRENT_DATE,
-            case_id INT NOT NULL,
-            uploaded_by INT NOT NULL,
-            FOREIGN KEY (case_id) REFERENCES cms.court_case(case_id),
-            FOREIGN KEY (uploaded_by) REFERENCES cms.users(user_id)
+            document_type VARCHAR(50),         -- نوع المستند
+            file_path TEXT NOT NULL,           -- مسار الملف
+            upload_date DATE DEFAULT CURRENT_DATE,  -- تاريخ الرفع
+            uploaded_by INT NOT NULL,          -- الموظف الذي رفع المستند
+            case_id INT,                       -- رقم القضية، يمكن تركه فارغ عند رفع المستند قبل إنشاء القضية
+            FOREIGN KEY (uploaded_by) REFERENCES cms.users(user_id),
+            FOREIGN KEY (case_id) REFERENCES cms.court_case(case_id)
         );
 
         -- =====================
@@ -153,19 +153,11 @@ class DataBase:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             is_read BOOLEAN DEFAULT FALSE,
             user_id INT NOT NULL,
-            document_id INT, 
+            document_id INT,
             FOREIGN KEY (user_id) REFERENCES cms.users(user_id),
             FOREIGN KEY (document_id) REFERENCES cms.document(document_id)
         );
         """)
-        
-        # Safe migration for existing tables
-        try:
-            self.cur.execute("ALTER TABLE cms.notification ADD COLUMN IF NOT EXISTS document_id INT REFERENCES cms.document(document_id);")
-        except Exception:
-            self.conn.rollback()
-
-        self.conn.commit()
         self.conn.commit()
 
 
