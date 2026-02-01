@@ -1,5 +1,4 @@
 import random
-import re
 from PyQt5 import uic,QtWidgets
 from PyQt5.QtWidgets import QWidget
 from db import DataBase
@@ -561,91 +560,107 @@ class UserWindow(QMainWindow):
             db.close()
 
 
-    # ================= NEW CASE =================
+    # ================= إنشاء القضايا =================
     def new_case_dialog(self):
         db = DataBase()
-
-        # جلب كل العملاء
         db.cur.execute("""
-            SELECT client_id, plaintiff_name, case_type
+            SELECT client_id, plaintiff_name, defendant_name, case_type
             FROM cms.client
         """)
         clients = db.cur.fetchall()
         db.close()
 
         if not clients:
-            QMessageBox.information(self, "Info", "No clients found in the database.")
+            QMessageBox.information(self, "تنبيه", "لا توجد عملاء في قاعدة البيانات بعد.")
             return
 
         dialog = QDialog(self)
-        dialog.setWindowTitle("Create New Case")
-        dialog.setFixedSize(450, 300)
+        dialog.setWindowTitle("إنشاء قضية جديدة")
+        dialog.setFixedSize(550, 350)
         layout = QVBoxLayout(dialog)
 
-        label = QLabel("اختر لائحة الدعوى:")
+        # واجهة من اليمين لليسار
+        dialog.setLayoutDirection(Qt.RightToLeft)
+
+        label = QLabel("اختر القضايا:")
         layout.addWidget(label)
 
-        # جدول اختيار العميل
         table = QTableWidget()
-        table.setColumnCount(2)
-        table.setHorizontalHeaderLabels(["Client Name", "Case Type"])
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(["اختيار", "المدعي", "المدعى عليه", "نوع القضية"])
         table.setRowCount(len(clients))
         table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table.setLayoutDirection(Qt.RightToLeft)  # RTL للجدول
+
+        checkboxes = []
 
         for row, client in enumerate(clients):
-            client_id, name, case_type = client
-            table.setItem(row, 0, QTableWidgetItem(name))
-            table.setItem(row, 1, QTableWidgetItem(case_type))
+            client_id, plaintiff_name, defendant_name, case_type = client
+
+            checkbox = QCheckBox()
+            checkbox_widget = QWidget()
+            cb_layout = QHBoxLayout(checkbox_widget)
+            cb_layout.addWidget(checkbox)
+            cb_layout.setAlignment(Qt.AlignCenter)
+            cb_layout.setContentsMargins(0, 0, 0, 0)
+            table.setCellWidget(row, 0, checkbox_widget)
+            checkboxes.append(checkbox)
+
+            table.setItem(row, 1, QTableWidgetItem(plaintiff_name))
+            table.setItem(row, 2, QTableWidgetItem(defendant_name))
+            table.setItem(row, 3, QTableWidgetItem(case_type))
+
         layout.addWidget(table)
 
-        save_btn = QPushButton("Create Case")
+        save_btn = QPushButton("إنشاء القضايا")
         layout.addWidget(save_btn)
 
         def create_case():
-            selected_rows = table.selectionModel().selectedRows()
-            if not selected_rows:
-                QMessageBox.warning(dialog, "Warning", "اختر لائحة أولاً")
-                return
-            row_idx = selected_rows[0].row()
-            client_id, name, case_type = clients[row_idx]
+            selected_rows = [i for i, cb in enumerate(checkboxes) if cb.isChecked()]
 
-            # 1️⃣ إنشاء رقم القضية
-            case_number = f"CASE-{date.today().strftime('%Y%m%d')}-{row_idx+1}"
-            filing_date = date.today()
-            status = "Open"
+            # i=> # الصف المحدد
+            # cb=> # خانة الاختيار
+
+            if not selected_rows:
+                QMessageBox.warning(dialog, "تنبيه", "اختر قضية واحدة على الأقل")
+                return
 
             db = DataBase()
-            # 2️⃣ إدراج القضية
-            db.cur.execute("""
-                INSERT INTO cms.court_case (case_type, case_number, status, filing_date, created_by)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING case_id
-            """, (case_type, case_number, status, filing_date, self.current_user_id))
-            new_case_id = db.cur.fetchone()[0]
 
-            # 3️⃣ ربط العميل بالقضية في case_client
-            db.cur.execute("""
-                INSERT INTO cms.case_client (case_id, client_id, role_in_case)
-                VALUES (%s, %s, %s)
-            """, (new_case_id, client_id, "Plaintiff"))
+            for idx in selected_rows:
+                client_id, plaintiff_name, defendant_name, case_type = clients[idx]
 
-            # 4️⃣ ربط المستندات بالقضية حسب case_type
-            db.cur.execute("""
-                UPDATE cms.document
-                SET case_id = %s
-                WHERE uploaded_by = %s AND case_id IS NULL AND document_type = %s
-            """, (new_case_id, self.current_user_id, case_type))
+                case_number = f"CASE-{date.today().strftime('%Y%m%d')}-{idx + 1}"
+                filing_date = date.today()
+                status = "مفتوحة"
+
+                db.cur.execute("""
+                    INSERT INTO cms.court_case (case_type, case_number, status, filing_date, created_by)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING case_id
+                """, (case_type, case_number, status, filing_date, self.current_user_id))
+                new_case_id = db.cur.fetchone()[0]
+
+                db.cur.execute("""
+                    INSERT INTO cms.case_client (case_id, client_id, role_in_case)
+                    VALUES (%s, %s, %s)
+                """, (new_case_id, client_id, "Plaintiff"))
+
+                db.cur.execute("""
+                    UPDATE cms.document
+                    SET case_id = %s
+                    WHERE uploaded_by = %s AND case_id IS NULL AND document_type = %s
+                """, (new_case_id, self.current_user_id, case_type))
 
             db.conn.commit()
             db.close()
 
-            QMessageBox.information(dialog, "Success", f"Case created successfully with ID {new_case_id}")
+            QMessageBox.information(dialog, "نجاح", f"تم إنشاء {len(selected_rows)} قضية بنجاح ✅")
             dialog.accept()
+
 
         save_btn.clicked.connect(create_case)
         dialog.exec_()
-
-
 
 
 class AddUserWindow(QMainWindow):
@@ -750,9 +765,9 @@ class Petition_Clerks(QMainWindow):
         
         # Case Configurations
         self.case_config = {
-            "case1": {"label": "نفقة زوجة", "template": "لائحة دعوى نفقة زوجة.docx"},
-            "case2": {"label": "عفش بيت", "template": "لائحة دعوى عفش بيت.docx"}, 
-            "case3": {"label": "مهر مؤجل", "template": "لائحة دعوى مهر مؤجل.docx"},
+            "case1": {"label": "نفقة زوجة", "template": "nafqa.docx"},
+            "case2": {"label": "عفش بيت", "template": "nafqa.docx"}, 
+            "case3": {"label": "مهر مؤجل", "template": "nafqa.docx"},
             "case4": {"label": "نفقة عفش غيابي", "template": "nafqa.docx"},
             "case5": {"label": "نفقة زوجة غيابي", "template": "nafqa.docx"},
             "case6": {"label": "نفقة صغار", "template": "nafqa.docx"},
@@ -812,8 +827,8 @@ class Petition_Clerks(QMainWindow):
             db = DataBase()
             db.cur.execute("""
                 INSERT INTO cms.client (client_id, plaintiff_name, plaintiff_national_id, plaintiff_phone,
-                                        defendant_name, defendant_national_id, defendant_phone, defendant_address, case_type, plaintiff_address)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                        defendant_name, defendant_national_id, defendant_phone, defendant_address, case_type)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 self.client_id,
                 self.plaintiff_name.text(),
@@ -823,8 +838,7 @@ class Petition_Clerks(QMainWindow):
                 self.defendant_national_id.text(),
                 self.defendant_phone.text(),
                 self.defendant_address.text(),
-                self.current_case_type,
-                self.plaintiff_address.text()
+                self.current_case_type 
             ))
             db.conn.commit()
             db.close()
@@ -857,83 +871,11 @@ class Petition_Clerks(QMainWindow):
             }
             day_in_arabic = days_map.get(date.today().strftime("%A"), date.today().strftime("%A"))
 
-            def replace_placeholders(doc, placeholders):
-                pl_name = placeholders.get("{PLAINTIFF_NAME}", "")
-                pl_addr = placeholders.get("{PLAINTIFF_ADDRESS}", "")
-                df_name = placeholders.get("{DEFENDANT_NAME}", "")
-                df_addr = placeholders.get("{DEFENDANT_ADDRESS}", "")
-
-                def process_p(p):
-                    text = p.text.strip()
-                    is_header_pl = text.startswith("المدعية/")
-                    is_header_df = text.startswith("المدعي عليه/") or text.startswith("المدعى عليه/")
-                    
-                    if (is_header_pl or is_header_df) and "ــــ" in text:
-                        # 1. Prepare address parts by splitting by '-'
-                        addr = pl_addr if is_header_pl else df_addr
-                        addr_parts = [part.strip() for part in addr.split('-')]
-                        from_val = addr_parts[0] if len(addr_parts) > 0 else addr
-                        residence_val = addr_parts[1] if len(addr_parts) > 1 else ""
-
-                        # 2. Merge underscore-only runs into previous runs to handle split blocks
-                        runs = p.runs
-                        for i in range(len(runs)-1, 0, -1):
-                            if re.fullmatch(r"[ـ\s\t]+", runs[i].text) and "ـ" in runs[i].text:
-                                runs[i-1].text += runs[i].text
-                                runs[i].text = ""
-
-                        # 3. Decide on replacements order: [Name, From, Residents]
-                        current_name = pl_name if is_header_pl else df_name
-                        repls = [current_name, from_val, residence_val]
-                        
-                        count = 0
-                        def repl_func(m):
-                            nonlocal count
-                            res = repls[count] if count < len(repls) else m.group(0)
-                            count += 1
-                            return res
-
-                        # 4. Replace in runs to PRESERVE FORMATTING
-                        for run in p.runs:
-                            if "ـ" in run.text:
-                                run.text = re.sub(r"ـ+", repl_func, run.text)
-                            
-                            for key, val in placeholders.items():
-                                if key in run.text:
-                                    run.text = run.text.replace(key, val)
-                    else:
-                        # 4. Standard placeholder replacement for other paragraphs
-                        for run in p.runs:
-                            for key, val in placeholders.items():
-                                if key in run.text:
-                                    run.text = run.text.replace(key, val)
-                            
-                            # Handle signature labels at the bottom
-                            # Match "المدعية" at the end of a run or line
-                            if run.text.strip() == "المدعية" and ("وحرر" in text or "الاحترام" in text):
-                                if pl_name not in run.text:
-                                    run.text = run.text.rstrip() + " / " + pl_name
-                            elif "المدعية /" in run.text:
-                                if pl_name not in run.text:
-                                    run.text = run.text.replace("المدعية /", "المدعية / " + pl_name)
-
-                # Apply to paragraphs
-                for p in doc.paragraphs:
-                    process_p(p)
-
-                # Apply to tables
-                for table in doc.tables:
-                    for row in table.rows:
-                        for cell in row.cells:
-                            for p in cell.paragraphs:
-                                process_p(p)
-
-            # Prepare placeholders
             placeholders = {
                 "{DATE_DAY}": day_in_arabic,
                 "{DATE_FULL}": date.today().strftime("%d/%m/%Y"),
                 "{PLAINTIFF_NAME}": self.plaintiff_name.text(),
-                "{PLAINTIFF_ADDRESS}": self.plaintiff_address.text(), 
+                "{PLAINTIFF_ADDRESS}": "غزة معسكر الشاطئ", 
                 "{LAWYER_NAME}": "معتصم كريزم",             
                 "{CLERK_NAME}": "مؤمن كريزم",               
                 "{DEFENDANT_NAME}": self.defendant_name.text(),
@@ -949,12 +891,27 @@ class Petition_Clerks(QMainWindow):
                 "{SESSION_DATE}": "9/11/2021",              
             }
 
+            def replace_placeholders(doc, placeholders):
+                for p in doc.paragraphs:
+                    for run in p.runs:
+                        for key, val in placeholders.items():
+                            if key in run.text:
+                                run.text = run.text.replace(key, val)
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            for p in cell.paragraphs:
+                                for run in p.runs:
+                                    for key, val in placeholders.items():
+                                        if key in run.text:
+                                            run.text = run.text.replace(key, val)
+
             replace_placeholders(doc, placeholders)
             doc.save(final_file)
             
              # Save to DB
             db = DataBase()
-            case_id = 1 
+            case_id = None
             db.cur.execute("""
                 INSERT INTO cms.document (document_type, file_path, uploaded_by,case_id)
                 VALUES (%s, %s, %s, %s)
@@ -1005,7 +962,6 @@ class Petition_Clerks(QMainWindow):
         self.plaintiff_name.clear()
         self.plaintiff_national_id.clear()
         self.plaintiff_phone.clear()
-        self.plaintiff_address.clear()
         self.defendant_name.clear()
         self.defendant_national_id.clear()
         self.defendant_phone.clear()
