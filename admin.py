@@ -134,7 +134,7 @@ class UserWindow(QMainWindow):
         if hasattr(self, 'notification') and hasattr(self, 'badge_label'):
             # Reparent to ensure it sits 'on top' or 'inside' the button's coordinate system
             self.badge_label.setParent(self.notification)
-            self.badge_label.move(25, 5) # Adjust position
+            self.badge_label.move(24, 2) # Adjust position to be top-right of bell
             
             # Timer to check for notifications
             self.timer = QTimer(self)
@@ -911,7 +911,7 @@ class Petition_Clerks(QMainWindow):
             
              # Save to DB
             db = DataBase()
-            case_id = None
+            case_id = 1
             db.cur.execute("""
                 INSERT INTO cms.document (document_type, file_path, uploaded_by,case_id)
                 VALUES (%s, %s, %s, %s)
