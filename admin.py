@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QHBoxLayout
 from PyQt5.QtWidgets import QHeaderView
 from PyQt5.QtCore import Qt
 
+#-------------
 class AdminWindow(QMainWindow):
     def __init__(self):
         super().__init__()
