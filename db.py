@@ -124,9 +124,11 @@ class DataBase:
             file_path TEXT NOT NULL,           -- مسار الملف
             upload_date DATE DEFAULT CURRENT_DATE,  -- تاريخ الرفع
             uploaded_by INT NOT NULL,          -- الموظف الذي رفع المستند
-            case_id INT,                       -- رقم القضية، يمكن تركه فارغ عند رفع المستند قبل إنشاء القضية
+            case_id INT, 
+            client_id INT,                      -- رقم القضية، يمكن تركه فارغ عند رفع المستند قبل إنشاء القضية
             FOREIGN KEY (uploaded_by) REFERENCES cms.users(user_id),
-            FOREIGN KEY (case_id) REFERENCES cms.court_case(case_id)
+            FOREIGN KEY (case_id) REFERENCES cms.court_case(case_id),
+            FOREIGN KEY (client_id) REFERENCES cms.client(client_id)
         );
 
         -- =====================

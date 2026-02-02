@@ -1,4 +1,6 @@
 import random
+import datetime
+from datetime import datetime
 from PyQt5 import uic,QtWidgets
 from PyQt5.QtWidgets import QWidget
 from db import DataBase
@@ -448,6 +450,7 @@ class UserWindow(QMainWindow):
         # 2. تعبئة الجدول
         table = self.masterRecordTable  # هذا اسم الـ QTableWidget في الصفحة الجديدة
         table.verticalHeader().setVisible(False)
+        table.setRowCount(0)
         table.setRowCount(len(records))
         for row_idx, row_data in enumerate(records):
             for col_idx, value in enumerate(row_data):
@@ -550,7 +553,48 @@ class UserWindow(QMainWindow):
                 VALUES (%s, %s, %s, %s, %s)
             """, (session_date, session_time, 'Scheduled', selected_case_id, judge_id))
             db.conn.commit()
-            QMessageBox.information(self, "نجاح", "تم حفظ الجلسة بنجاح")
+
+            # Get Case Number and actual file path
+            db.cur.execute("SELECT case_number FROM cms.court_case WHERE case_id = %s", (selected_case_id,))
+            case_number_val = db.cur.fetchone()[0]
+
+            db.cur.execute("""
+                SELECT file_path 
+                FROM cms.document
+                WHERE case_id = %s
+                ORDER BY upload_date DESC LIMIT 1
+            """, (selected_case_id,))
+            res = db.cur.fetchone()
+            
+            if res:
+                file_path = res[0]
+                if os.path.exists(file_path):
+                    doc = Document(file_path)
+                    placeholders = {          
+                        "{CASE_NUMBER}": str(case_number_val),
+                        "{SESSION_DATE}": session_date,
+                        "{SESSION_TIME}": session_time
+                    }
+
+                    def replace_placeholders(doc, placeholders):
+                        for p in doc.paragraphs:
+                            for run in p.runs:
+                                for key, val in placeholders.items():
+                                    if key in run.text:
+                                        run.text = run.text.replace(key, val)
+                        for table in doc.tables:
+                            for row in table.rows:
+                                for cell in row.cells:
+                                    for p in cell.paragraphs:
+                                        for run in p.runs:
+                                            for key, val in placeholders.items():
+                                                if key in run.text:
+                                                    run.text = run.text.replace(key, val)
+
+                    replace_placeholders(doc, placeholders)
+                    doc.save(file_path)
+
+            QMessageBox.information(self, "نجاح", "تم حفظ الجلسة وتحديث ملف الدعوى بنجاح ✅")
             
             # Refresh the table
             self.show_scheduling()
@@ -567,8 +611,10 @@ class UserWindow(QMainWindow):
         db.cur.execute("""
             SELECT client_id, plaintiff_name, defendant_name, case_type
             FROM cms.client
-        """)
+            WHERE client_id NOT IN (SELECT client_id FROM cms.case_client)
+            """)
         clients = db.cur.fetchall()
+        print(clients)
         db.close()
 
         if not clients:
@@ -587,9 +633,9 @@ class UserWindow(QMainWindow):
         layout.addWidget(label)
 
         table = QTableWidget()
+        table.setRowCount(len(clients))
         table.setColumnCount(4)
         table.setHorizontalHeaderLabels(["اختيار", "المدعي", "المدعى عليه", "نوع القضية"])
-        table.setRowCount(len(clients))
         table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         table.setLayoutDirection(Qt.RightToLeft)  # RTL للجدول
 
@@ -630,16 +676,22 @@ class UserWindow(QMainWindow):
 
             for idx in selected_rows:
                 client_id, plaintiff_name, defendant_name, case_type = clients[idx]
-
-                case_number = f"CASE-{date.today().strftime('%Y%m%d')}-{idx + 1}"
+                db.cur.execute("""
+                    SELECT *
+                    FROM cms.court_case
+                """)
+                case_count = len(db.cur.fetchall())
+                case_number = f"{datetime.now().strftime('%Y')}/{case_count + 1}"
                 filing_date = date.today()
                 status = "مفتوحة"
+                year = datetime.now().strftime('%Y')
+                description = "-"
 
                 db.cur.execute("""
-                    INSERT INTO cms.court_case (case_type, case_number, status, filing_date, created_by)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO cms.court_case (case_type, case_number, status, filing_date, year, description, created_by)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                     RETURNING case_id
-                """, (case_type, case_number, status, filing_date, self.current_user_id))
+                """, (case_type, case_number, status, filing_date, year, description, self.current_user_id))
                 new_case_id = db.cur.fetchone()[0]
 
                 db.cur.execute("""
@@ -768,7 +820,7 @@ class Petition_Clerks(QMainWindow):
         self.case_config = {
             "case1": {"label": "نفقة زوجة", "template": "nafqa.docx"},
             "case2": {"label": "عفش بيت", "template": "nafqa.docx"}, 
-            "case3": {"label": "مهر مؤجل", "template": "nafqa.docx"},
+            "case3": {"label": "مهر مؤجل", "template": "لائحة دعوى عفش بيت.docx"},
             "case4": {"label": "نفقة عفش غيابي", "template": "nafqa.docx"},
             "case5": {"label": "نفقة زوجة غيابي", "template": "nafqa.docx"},
             "case6": {"label": "نفقة صغار", "template": "nafqa.docx"},
@@ -823,7 +875,9 @@ class Petition_Clerks(QMainWindow):
 
         # 1. Register Client
         try:
-            self.client_id = random.randint(1, 10000000)
+            self.i += 1
+            self.client_id = f"1{datetime.now().year}{self.i}"
+
             # Re-open DB connection for transaction
             db = DataBase()
             db.cur.execute("""
@@ -849,7 +903,7 @@ class Petition_Clerks(QMainWindow):
 
         # 2. Generate File
         template_name = self.current_case_data.get("template", "nafqa.docx")
-        template_path = f"./files/{template_name}" 
+        template_path = f"./file/{template_name}" 
         if not os.path.exists(template_path):
             QMessageBox.warning(self, "Error", "Original template not found!")
             return
@@ -912,7 +966,7 @@ class Petition_Clerks(QMainWindow):
             
              # Save to DB
             db = DataBase()
-            case_id = 1
+            case_id = None
             db.cur.execute("""
                 INSERT INTO cms.document (document_type, file_path, uploaded_by,case_id)
                 VALUES (%s, %s, %s, %s)
