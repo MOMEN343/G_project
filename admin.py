@@ -5,7 +5,7 @@ from PyQt5 import uic,QtWidgets
 from PyQt5.QtWidgets import QWidget
 from db import DataBase
 from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel, QLineEdit, QTableWidget, QTableWidgetItem, QVBoxLayout, QMessageBox
-from PyQt5.QtGui import QFontDatabase
+from PyQt5.QtGui import QFontDatabase, QColor
 from PyQt5.QtWidgets import QHBoxLayout
 from PyQt5.QtWidgets import QHeaderView
 from PyQt5.QtCore import Qt
@@ -127,6 +127,7 @@ class UserWindow(QMainWindow):
         self.master_record.clicked.connect(self.show_master_record)
         self.btn_scheduling.clicked.connect(self.show_scheduling)
         self.btn_save_session.clicked.connect(self.save_session)
+        self.case2.clicked.connect(self.show_calendar)
         
         if hasattr(self, 'notification'):
             self.notification.clicked.connect(self.show_notifications)
@@ -152,7 +153,7 @@ class UserWindow(QMainWindow):
 
         # Ensure we start at the empty page
         if hasattr(self, 'mainStack'):
-             self.mainStack.setCurrentIndex(0)
+             self.mainStack.setCurrentWidget(self.page_empty)
              
         # Force alignment on the grid layout to prevent items from expanding to fill the whole area
         if hasattr(self, 'files_grid'):
@@ -266,9 +267,31 @@ class UserWindow(QMainWindow):
     def handle_notification_click(self, document_id):
         self.show_documents(highlight_id=document_id)
 
+    def reset_sidebar_styles(self):
+        default_style = """
+            QPushButton {
+                color:#f3e8df;
+                border-bottom: 1px solid #f3e8df;
+                padding-bottom: 10px;
+                background: transparent;
+            }
+            QPushButton:hover {
+                background: white;
+                color:#452829;
+                padding-bottom: 5px;
+            }
+        """
+        self.add_case.setStyleSheet(default_style)
+        self.docments.setStyleSheet(default_style)
+        self.master_record.setStyleSheet(default_style)
+        self.btn_scheduling.setStyleSheet(default_style)
+        self.case2.setStyleSheet(default_style)
+
     def show_documents(self, highlight_id=None):
+        self.reset_sidebar_styles()
+        self.docments.setStyleSheet(self.docments.styleSheet() + "background: white; color: #452829;")
         if hasattr(self, 'mainStack'):
-            self.mainStack.setCurrentIndex(1) # Show documents page
+            self.mainStack.setCurrentWidget(self.page_documents) # Show documents page
 
         # Clear existing items in the grid
         if hasattr(self, 'files_grid'):
@@ -434,7 +457,70 @@ class UserWindow(QMainWindow):
     def log_out(self):
         self.close()
 
+    def show_calendar(self):
+        # Highlight active button
+        self.reset_sidebar_styles()
+        self.case2.setStyleSheet(self.case2.styleSheet() + "background: white; color: #452829;")
+        
+        self.mainStack.setCurrentWidget(self.page_calendar)
+        
+        # Set current date label
+        self.label_calendar_date.setText(datetime.now().strftime("%B %d, %Y"))
+        
+        # 1. Fetch Judges from Database
+        db = DataBase()
+        db.cur.execute("SELECT full_name FROM cms.users WHERE role_id = 4") # role_id 4 = Judge
+        judges_data = db.cur.fetchall()
+        db.close()
+        
+        judge_names = [j[0] for j in judges_data]
+        if not judge_names:
+            judge_names = ["لا يوجد قضاة"]
+        
+        # Setup the calendar table (Schedule view)
+        table = self.mainCalendarTable
+        table.setColumnCount(len(judge_names))
+        table.setHorizontalHeaderLabels(judge_names)
+        table.verticalHeader().setVisible(True)
+        table.setRowCount(11) # 09:00 to 19:00
+        
+        # ... existing setup ...
+        hours = [f"{h:02d}:00" for h in range(9, 20)]
+        table.setVerticalHeaderLabels(hours)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+        # Clear existing items
+        table.clearContents()
+
+        # Add some dummy sessions for demonstration (mimicking the image)
+        def add_event(row, col, text, color):
+            item = QTableWidgetItem(text)
+            item.setBackground(QColor(color))
+            item.setForeground(QColor("white"))
+            item.setTextAlignment(Qt.AlignCenter)
+            font = item.font()
+            font.setBold(True)
+            item.setFont(font)
+            table.setItem(row, col, item)
+
+        # Demo events
+        add_event(1, 0, "Check the plan\n10:00-11:00", "#4A90E2")
+        add_event(1, 1, "Rawan, Busy\n10:00-11:00", "#9B9BEE")
+        add_event(1, 2, "Ahmed, Busy\n10:00-11:00", "#A2D9CE")
+        add_event(1, 3, "Yasser, Busy\n10:00-11:00", "#ABEBC6")
+        add_event(1, 5, "Rawan, Busy\n09:00-11:00", "#EB984E")
+        
+        add_event(3, 1, "Rawan, Busy\n12:00-13:00", "#5DADE2")
+        add_event(3, 2, "Ahmed, Busy\n12:00-13:00", "#16A085")
+        add_event(3, 3, "Yasser, Busy\n12:00-13:00", "#2ECC71")
+        
+        add_event(4, 0, "Check the plan\n13:00-14:00", "#1A5276")
+        add_event(4, 1, "Rawan, Busy", "#5499C7")
+
     def show_master_record(self):
+        self.reset_sidebar_styles()
+        self.master_record.setStyleSheet(self.master_record.styleSheet() + "background: white; color: #452829;")
         # 1. جلب بيانات سجل الأساس من قاعدة البيانات
         db = DataBase()
         db.cur.execute("""
@@ -460,6 +546,8 @@ class UserWindow(QMainWindow):
         self.mainStack.setCurrentWidget(self.page_master_record)
 
     def show_scheduling(self):
+        self.reset_sidebar_styles()
+        self.btn_scheduling.setStyleSheet(self.btn_scheduling.styleSheet() + "background: white; color: #452829;")
         self.mainStack.setCurrentWidget(self.page_scheduling)
         # Populate table
         # Fetch cases that do NOT have a 'Scheduled' session
@@ -872,11 +960,11 @@ class Petition_Clerks(QMainWindow):
         if receiver_id is None:
              QMessageBox.warning(self, "Error", "الرجاء اختيار المستلم!")
              return
-
         # 1. Register Client
         try:
-            self.i += 1
-            self.client_id = f"1{datetime.now().year}{self.i}"
+            i = 1
+            i += 1
+            client_id = f"1{datetime.now().year}{i}"
 
             # Re-open DB connection for transaction
             db = DataBase()
@@ -885,7 +973,7 @@ class Petition_Clerks(QMainWindow):
                                         defendant_name, defendant_national_id, defendant_phone, defendant_address, case_type)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
-                self.client_id,
+                client_id,
                 self.plaintiff_name.text(),
                 self.plaintiff_national_id.text(),
                 self.plaintiff_phone.text(),
