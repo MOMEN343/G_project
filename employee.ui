@@ -681,88 +681,242 @@ border: none;
             </item>
            </layout>
           </widget>
-          <widget class="QWidget" name="page_master_record">
-           <layout class="QVBoxLayout" name="verticalLayout_master">
-            <item>
-             <widget class="QLabel" name="label_master_title">
-              <property name="font">
-               <font>
-                <pointsize>16</pointsize>
-                <weight>75</weight>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>سجل الأساس</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QTableWidget" name="masterRecordTable">
-              <property name="layoutDirection">
-               <enum>Qt::RightToLeft</enum>
-              </property>
-              <column>
-               <property name="text">
-                <string>رقم القضية</string>
+           <widget class="QWidget" name="page_master_record">
+            <layout class="QVBoxLayout" name="verticalLayout_master">
+             <property name="spacing">
+              <number>20</number>
+             </property>
+             <item>
+              <layout class="QHBoxLayout" name="masterHeaderLayout">
+               <item>
+                <widget class="QLabel" name="label_master_title">
+                 <property name="font">
+                  <font>
+                   <pointsize>20</pointsize>
+                   <weight>75</weight>
+                   <bold>true</bold>
+                  </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">color: #452829;</string>
+                 </property>
+                 <property name="text">
+                  <string>🗄 سجل الأســــاس</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="masterHeaderSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="searchMasterRecord">
+                 <property name="minimumSize">
+                  <size>
+                   <width>350</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                 <property name="placeholderText">
+                  <string>🔍 ابحث برقم القضية أو اسم الخصوم...</string>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">
+                    QLineEdit {
+                        background-color: white;
+                        border: 2px solid #e0e0e0;
+                        border-radius: 10px;
+                        padding: 5px 15px;
+                        font-size: 14px;
+                    }
+                    QLineEdit:focus {
+                        border: 2px solid #452829;
+                    }
+                  </string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QTableWidget" name="masterRecordTable">
+               <property name="layoutDirection">
+                <enum>Qt::RightToLeft</enum>
                </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>اسم المدعي</string>
+               <property name="styleSheet">
+                <string notr="true">
+                  QTableWidget {
+                    background-color: white;
+                    border-radius: 15px;
+                    border: 1px solid #e0e0e0;
+                    gridline-color: #f0f0f0;
+                    selection-background-color: #f3e8df;
+                    selection-color: #452829;
+                  }
+                  QHeaderView::section {
+                    background-color: #452829;
+                    color: white;
+                    padding: 12px;
+                    border: none;
+                    font-weight: bold;
+                    font-size: 14px;
+                  }
+                  QTableWidget::item {
+                    padding: 10px;
+                    border-bottom: 1px solid #f0f0f0;
+                  }
+                </string>
                </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>اسم المدعى عليه</string>
+               <property name="editTriggers">
+                <set>QAbstractItemView::NoEditTriggers</set>
                </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>نوع القضية</string>
+               <property name="selectionBehavior">
+                <set>QAbstractItemView::SelectRows</set>
                </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>تاريخ الملف</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>حالة القضية</string>
-               </property>
-              </column>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="page_scheduling">
-           <layout class="QVBoxLayout" name="verticalLayout_scheduling">
-            <item>
-             <widget class="QLabel" name="label_scheduling_title">
-              <property name="font">
-               <font>
-                <pointsize>16</pointsize>
-                <weight>75</weight>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>جدولة جلسة جديدة</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
+               <column>
+                <property name="text">
+                 <string>رقم القضية</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>اسم المدعي</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>اسم المدعى عليه</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>نوع القضية</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>تاريخ الملف</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>حالة القضية</string>
+                </property>
+               </column>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_scheduling">
+            <layout class="QVBoxLayout" name="verticalLayout_scheduling">
+             <property name="spacing">
+              <number>20</number>
+             </property>
+             <item>
+              <layout class="QHBoxLayout" name="schedulingHeaderLayout">
+               <item>
+                <widget class="QLabel" name="label_scheduling_title">
+                 <property name="font">
+                  <font>
+                   <pointsize>20</pointsize>
+                   <weight>75</weight>
+                   <bold>true</bold>
+                  </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">color: #452829;</string>
+                 </property>
+                 <property name="text">
+                  <string>📅 جدولة جلسة جديدة</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="schedulingHeaderSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="searchScheduling">
+                 <property name="minimumSize">
+                  <size>
+                   <width>350</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                 <property name="placeholderText">
+                  <string>🔍 بحث عن قضية لجدولتها...</string>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">
+                    QLineEdit {
+                        background-color: white;
+                        border: 2px solid #e0e0e0;
+                        border-radius: 10px;
+                        padding: 5px 15px;
+                        font-size: 14px;
+                    }
+                    QLineEdit:focus {
+                        border: 2px solid #452829;
+                    }
+                  </string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
              <widget class="QTableWidget" name="schedulingTable">
               <property name="layoutDirection">
                <enum>Qt::RightToLeft</enum>
               </property>
+               <property name="styleSheet">
+                <string notr="true">
+                  QTableWidget {
+                    background-color: white;
+                    border-radius: 15px;
+                    border: 1px solid #e0e0e0;
+                    gridline-color: #f0f0f0;
+                    selection-background-color: #f3e8df;
+                    selection-color: #452829;
+                  }
+                  QHeaderView::section {
+                    background-color: #452829;
+                    color: white;
+                    padding: 12px;
+                    border: none;
+                    font-weight: bold;
+                    font-size: 14px;
+                  }
+                  QTableWidget::item {
+                    padding: 10px;
+                    border-bottom: 1px solid #f0f0f0;
+                  }
+                </string>
+               </property>
+               <property name="editTriggers">
+                <set>QAbstractItemView::NoEditTriggers</set>
+               </property>
+               <property name="selectionBehavior">
+                <set>QAbstractItemView::SelectRows</set>
+               </property>
               <column>
                <property name="text">
                 <string>اختيار</string>

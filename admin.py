@@ -1,14 +1,23 @@
 import random
 import datetime
+import os
+import shutil
+from docx import Document
 from datetime import datetime
+from datetime import date
+from db import DataBase
 from PyQt5 import uic,QtWidgets
 from PyQt5.QtWidgets import QWidget
-from db import DataBase
 from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel, QLineEdit, QTableWidget, QTableWidgetItem, QVBoxLayout, QMessageBox
 from PyQt5.QtGui import QFontDatabase, QColor
 from PyQt5.QtWidgets import QHBoxLayout
 from PyQt5.QtWidgets import QHeaderView
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import  Qt, QPoint, QTimer
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QPushButton, QScrollArea, QGridLayout,
+    QTableWidget, QTableWidgetItem, QHeaderView, QDialog, QMessageBox,
+    QMenu, QWidgetAction, QFrame, QHBoxLayout, QCheckBox
+)
 
 #-------------
 class AdminWindow(QMainWindow):
@@ -79,17 +88,6 @@ class AdminWindow(QMainWindow):
     def log_out (self):
         self.close()
 
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QPushButton, QScrollArea, QGridLayout,
-    QTableWidget, QTableWidgetItem, QHeaderView, QDialog, QMessageBox,
-    QMenu, QWidgetAction, QFrame, QHBoxLayout, QCheckBox
-)
-from PyQt5.QtCore import Qt, QPoint, QTimer
-import os
-import shutil
-from docx import Document
-from db import DataBase
-from datetime import date
 
 class UserWindow(QMainWindow):
     def __init__(self, current_user_id):
@@ -128,6 +126,8 @@ class UserWindow(QMainWindow):
         self.btn_scheduling.clicked.connect(self.show_scheduling)
         self.btn_save_session.clicked.connect(self.save_session)
         self.case2.clicked.connect(self.show_calendar)
+        self.searchMasterRecord.textChanged.connect(self.filter_master_record)
+        self.searchScheduling.textChanged.connect(self.filter_scheduling)
         
         if hasattr(self, 'notification'):
             self.notification.clicked.connect(self.show_notifications)
@@ -518,6 +518,30 @@ class UserWindow(QMainWindow):
         add_event(4, 0, "Check the plan\n13:00-14:00", "#1A5276")
         add_event(4, 1, "Rawan, Busy", "#5499C7")
 
+    def filter_master_record(self, text):
+        """Filters the rows in the Master Record table based on search text."""
+        table = self.masterRecordTable
+        for row in range(table.rowCount()):
+            match = False
+            for col in range(table.columnCount()):
+                item = table.item(row, col)
+                if item and text.lower() in item.text().lower():
+                    match = True
+                    break
+            table.setRowHidden(row, not match)
+
+    def filter_scheduling(self, text):
+        """Filters the rows in the Scheduling table based on search text."""
+        table = self.schedulingTable
+        for row in range(table.rowCount()):
+            match = False
+            for col in range(1, table.columnCount()): # Skip checkbox column
+                item = table.item(row, col)
+                if item and text.lower() in item.text().lower():
+                    match = True
+                    break
+            table.setRowHidden(row, not match)
+
     def show_master_record(self):
         self.reset_sidebar_styles()
         self.master_record.setStyleSheet(self.master_record.styleSheet() + "background: white; color: #452829;")
@@ -534,14 +558,37 @@ class UserWindow(QMainWindow):
         db.close()
 
         # 2. تعبئة الجدول
-        table = self.masterRecordTable  # هذا اسم الـ QTableWidget في الصفحة الجديدة
+        table = self.masterRecordTable
         table.verticalHeader().setVisible(False)
         table.setRowCount(0)
         table.setRowCount(len(records))
+        
+        # Adjust column sizes
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        
         for row_idx, row_data in enumerate(records):
             for col_idx, value in enumerate(row_data):
-                table.setItem(row_idx, col_idx, QTableWidgetItem(str(value)))
+                item = QTableWidgetItem(str(value))
+                item.setTextAlignment(Qt.AlignCenter)
+                table.setItem(row_idx, col_idx, item)
+                
+                # Special styling for status column
+                if col_idx == 5: # Status column
+                    if str(value) == "جديد":
+                        item.setForeground(QColor("#2ECC71")) # Green
+                    elif str(value) == "مغلق":
+                        item.setForeground(QColor("#E74C3C")) # Red
+                    item.setTextAlignment(Qt.AlignCenter)
+                    font = item.font()
+                    font.setBold(True)
+                    item.setFont(font)
+                
+                table.setItem(row_idx, col_idx, item)
 
+        # Clear search box when switching to this page
+        self.searchMasterRecord.clear()
+        
         # 3. عرض الصفحة في الـ stacked widget
         self.mainStack.setCurrentWidget(self.page_master_record)
 
@@ -565,6 +612,9 @@ class UserWindow(QMainWindow):
         records = db.cur.fetchall()
         db.close()
         
+        # Clear search box when switching to this page
+        self.searchScheduling.clear()
+        
         table = self.schedulingTable
         table.setRowCount(0)
         table.verticalHeader().setVisible(False)
@@ -585,10 +635,10 @@ class UserWindow(QMainWindow):
             self.scheduling_checkboxes.append((chk, data[0])) # Store case_id
             
             # Data cols
-            table.setItem(row, 1, QTableWidgetItem(str(data[0])))
-            table.setItem(row, 2, QTableWidgetItem(str(data[1])))
-            table.setItem(row, 3, QTableWidgetItem(str(data[2])))
-            table.setItem(row, 4, QTableWidgetItem(str(data[3])))
+            for col, val in enumerate(data, start=1):
+                item = QTableWidgetItem(str(val))
+                item.setTextAlignment(Qt.AlignCenter)
+                table.setItem(row, col, item)
 
         # Populate Judge Combo
         self.judgeComboBox.clear()
