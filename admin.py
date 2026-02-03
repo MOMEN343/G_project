@@ -135,6 +135,7 @@ class UserWindow(QMainWindow):
         
         if hasattr(self, 'notification'):
             self.notification.clicked.connect(self.show_notifications)
+            self.notification.setFocusPolicy(Qt.NoFocus)
         
         # --- Notification Badge ---
         # The badge is now defined in the UI file as 'badge_label'
@@ -1056,7 +1057,7 @@ class Petition_Clerks(QMainWindow):
 
         # 2. Generate File
         template_name = self.current_case_data.get("template", "لائحة دعوى نفقة زوجة.docx")
-        template_path = f"./file/{template_name}" 
+        template_path = f"./files/{template_name}" 
         if not os.path.exists(template_path):
             QMessageBox.warning(self, "Error", "Original template not found!")
             return

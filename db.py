@@ -159,6 +159,9 @@ class DataBase:
             FOREIGN KEY (user_id) REFERENCES cms.users(user_id),
             FOREIGN KEY (document_id) REFERENCES cms.document(document_id)
         );
+
+        -- Ensure case_id in document table allows NULLs (for clerks workflow)
+        ALTER TABLE cms.document ALTER COLUMN case_id DROP NOT NULL;
         """)
         self.conn.commit()
 

@@ -444,7 +444,7 @@ border: solid 20px #f3db93;</string>
             <string notr="true">color: #452829; font-size: 25px; background-color: #f3e8df; padding-right: 5px;</string>
            </property>
            <property name="text">
-            <string>القضايا:</string>
+            <string>لوائح الدعوى:</string>
            </property>
           </widget>
          </item>
