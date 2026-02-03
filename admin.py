@@ -21,8 +21,9 @@ from PyQt5.QtWidgets import (
 
 #-------------
 class AdminWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, main_shell=None):
         super().__init__()
+        self.main_shell = main_shell
         self.db = DataBase()
 
         uic.loadUi("admin_dashboard.ui", self)
@@ -31,7 +32,6 @@ class AdminWindow(QMainWindow):
         self.addEmployeeBtn.clicked.connect(self.open_add_user_window)
         self.logoutBtn.clicked.connect(self.log_out)
 
-        self.showMaximized()
         self.employeesTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         QFontDatabase.addApplicationFont("fonts/Alyamama-Bold.ttf")       
         self.setStyleSheet("""
@@ -86,13 +86,17 @@ class AdminWindow(QMainWindow):
         self.employeesTable.setItem(row_position, 6, QTableWidgetItem(role_id))
 
     def log_out (self):
-        self.close()
+        if self.main_shell:
+            self.main_shell.switch_to_login()
+        else:
+            self.close()
 
 
 class UserWindow(QMainWindow):
-    def __init__(self, current_user_id):
+    def __init__(self, current_user_id, main_shell=None):
         super().__init__()
         self.current_user_id = current_user_id
+        self.main_shell = main_shell
         self.db = DataBase()
 
         # Load the new UI
@@ -159,7 +163,8 @@ class UserWindow(QMainWindow):
         if hasattr(self, 'files_grid'):
             self.files_grid.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
-        self.showMaximized()
+        if hasattr(self, 'files_grid'):
+            self.files_grid.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
     def update_badge(self):
         try:
@@ -455,7 +460,10 @@ class UserWindow(QMainWindow):
             QMessageBox.warning(self, "Error", f"Could not open file: {e}")
             
     def log_out(self):
-        self.close()
+        if self.main_shell:
+            self.main_shell.switch_to_login()
+        else:
+            self.close()
 
     def show_calendar(self):
         # Highlight active button
@@ -934,15 +942,15 @@ class AddUserWindow(QMainWindow):
         self.close()
 
 class Petition_Clerks(QMainWindow):
-    def __init__(self, current_user_id):
+    def __init__(self, current_user_id, main_shell=None):
         super().__init__()
         self.db = DataBase()
         self.c_u_i = current_user_id
+        self.main_shell = main_shell
         self.current_case_data = None # To store selected case config
 
         # تحميل الواجهة من ملف UI
-        uic.loadUi("petition_clerks2.ui", self)  
-        self.showMaximized()
+        uic.loadUi("petition_clerks2.ui", self)
         self.setStyleSheet("""
         * {
             font-family: "Alyamama";
@@ -956,9 +964,9 @@ class Petition_Clerks(QMainWindow):
         
         # Case Configurations
         self.case_config = {
-            "case1": {"label": "نفقة زوجة", "template": "nafqa.docx"},
-            "case2": {"label": "عفش بيت", "template": "nafqa.docx"}, 
-            "case3": {"label": "مهر مؤجل", "template": "لائحة دعوى عفش بيت.docx"},
+            "case1": {"label": "نفقة زوجة", "template": "لائحة دعوى نفقة زوجة.docx"},
+            "case2": {"label": "عفش بيت", "template": "لائحة دعوى عفش بيت.docx"}, 
+            "case3": {"label": "مهر مؤجل", "template": "لائحة دعوى مهر مؤجل.docx"},
             "case4": {"label": "نفقة عفش غيابي", "template": "nafqa.docx"},
             "case5": {"label": "نفقة زوجة غيابي", "template": "nafqa.docx"},
             "case6": {"label": "نفقة صغار", "template": "nafqa.docx"},
@@ -976,6 +984,16 @@ class Petition_Clerks(QMainWindow):
         # Populate Receivers
         self.load_receivers()
 
+        # Fix Tab Order
+        self.setTabOrder(self.plaintiff_name, self.plaintiff_national_id)
+        self.setTabOrder(self.plaintiff_national_id, self.plaintiff_phone)
+        self.setTabOrder(self.plaintiff_phone, self.defendant_name)
+        self.setTabOrder(self.defendant_name, self.defendant_national_id)
+        self.setTabOrder(self.defendant_national_id, self.defendant_phone)
+        self.setTabOrder(self.defendant_phone, self.defendant_address)
+        self.setTabOrder(self.defendant_address, self.comboBox)
+        self.setTabOrder(self.comboBox, self.sendFile)
+
     def handle_case_selection(self):
         sender = self.sender()
         if sender:
@@ -989,7 +1007,7 @@ class Petition_Clerks(QMainWindow):
                 self.label_2.setText(f"أدخل بيانات لائحة دعوى {self.current_case_type}")
             else:
                 self.current_case_type = sender.text() # Fallback
-                self.current_case_data = {"label": sender.text(), "template": "nafqa.docx"}
+                self.current_case_data = {"label": sender.text(), "template": "لائحة دعوى نفقة زوجة.docx"}
                 self.label_2.setText(f"أدخل بيانات {self.current_case_type}")
 
     def load_receivers(self):
@@ -1012,18 +1030,14 @@ class Petition_Clerks(QMainWindow):
              return
         # 1. Register Client
         try:
-            i = 1
-            i += 1
-            client_id = f"1{datetime.now().year}{i}"
-
             # Re-open DB connection for transaction
             db = DataBase()
             db.cur.execute("""
-                INSERT INTO cms.client (client_id, plaintiff_name, plaintiff_national_id, plaintiff_phone,
+                INSERT INTO cms.client (plaintiff_name, plaintiff_national_id, plaintiff_phone,
                                         defendant_name, defendant_national_id, defendant_phone, defendant_address, case_type)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING client_id
             """, (
-                client_id,
                 self.plaintiff_name.text(),
                 self.plaintiff_national_id.text(),
                 self.plaintiff_phone.text(),
@@ -1033,6 +1047,7 @@ class Petition_Clerks(QMainWindow):
                 self.defendant_address.text(),
                 self.current_case_type 
             ))
+            client_id = db.cur.fetchone()[0]
             db.conn.commit()
             db.close()
         except Exception as e:
@@ -1040,7 +1055,7 @@ class Petition_Clerks(QMainWindow):
              return
 
         # 2. Generate File
-        template_name = self.current_case_data.get("template", "nafqa.docx")
+        template_name = self.current_case_data.get("template", "لائحة دعوى نفقة زوجة.docx")
         template_path = f"./file/{template_name}" 
         if not os.path.exists(template_path):
             QMessageBox.warning(self, "Error", "Original template not found!")
@@ -1164,4 +1179,7 @@ class Petition_Clerks(QMainWindow):
         self.label_2.setText("أدخل بيانات لائحة الدعوى:")
 
     def log_out (self):
-        self.close()  
+        if self.main_shell:
+            self.main_shell.switch_to_login()
+        else:
+            self.close()  

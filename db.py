@@ -6,10 +6,10 @@ class DataBase:
     def __init__(self): 
         self.conn = psycopg2.connect(
             host="localhost",
-            port=5432,
+            port=1234,
             database="g_project",
             user="postgres",
-            password ="2002"
+            password ="2052005"
         )
         self.cur = self.conn.cursor()
         self.create_tables()
