@@ -162,6 +162,14 @@ class DataBase:
 
         -- Ensure case_id in document table allows NULLs (for clerks workflow)
         ALTER TABLE cms.document ALTER COLUMN case_id DROP NOT NULL;
+        
+        -- Add plaintiff_address if not exists
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='cms' AND table_name='client' AND column_name='plaintiff_address') THEN 
+                ALTER TABLE cms.client ADD COLUMN plaintiff_address TEXT; 
+            END IF; 
+        END $$;
         """)
         self.conn.commit()
 

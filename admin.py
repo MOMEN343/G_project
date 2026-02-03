@@ -974,13 +974,10 @@ class Petition_Clerks(QMainWindow):
         }
 
         # Case Selection Buttons
-        self.buttons = [self.case1, self.case2, self.case3]
-        # Try to add other buttons if they exist in UI but aren't in list yet, or stick to list
-        # The user's earlier list had up to case6, but snippet showed 3. 
-        # I'll rely on the buttons list and ensure the mapping handles them.
-        
-        for btn in self.buttons:
-            btn.clicked.connect(self.handle_case_selection)
+        for btn_id in self.case_config.keys():
+            if hasattr(self, btn_id):
+                btn = getattr(self, btn_id)
+                btn.clicked.connect(self.handle_case_selection_click)
 
         # Populate Receivers
         self.load_receivers()
@@ -988,60 +985,63 @@ class Petition_Clerks(QMainWindow):
         # Fix Tab Order
         self.setTabOrder(self.plaintiff_name, self.plaintiff_national_id)
         self.setTabOrder(self.plaintiff_national_id, self.plaintiff_phone)
-        self.setTabOrder(self.plaintiff_phone, self.defendant_name)
+        self.setTabOrder(self.plaintiff_phone, self.plaintiff_address)
+        self.setTabOrder(self.plaintiff_address, self.defendant_name)
         self.setTabOrder(self.defendant_name, self.defendant_national_id)
         self.setTabOrder(self.defendant_national_id, self.defendant_phone)
         self.setTabOrder(self.defendant_phone, self.defendant_address)
         self.setTabOrder(self.defendant_address, self.comboBox)
         self.setTabOrder(self.comboBox, self.sendFile)
 
-    def handle_case_selection(self):
-        sender = self.sender()
-        if sender:
-            btn_name = sender.objectName()
-            if btn_name in self.case_config:
-                self.current_case_data = self.case_config[btn_name]
-                # Store the key or label as the case_type for DB?
-                # Usually text is better for readability unless there's an enum.
-                # using label for display and DB
-                self.current_case_type = self.current_case_data["label"] 
-                self.label_2.setText(f"أدخل بيانات لائحة دعوى {self.current_case_type}")
-            else:
-                self.current_case_type = sender.text() # Fallback
-                self.current_case_data = {"label": sender.text(), "template": "لائحة دعوى نفقة زوجة.docx"}
-                self.label_2.setText(f"أدخل بيانات {self.current_case_type}")
-
     def load_receivers(self):
-        self.comboBox.clear()
-        self.comboBox.addItem("اختر المستلم")
-        self.db.cur.execute("SELECT user_id, full_name FROM cms.users WHERE role_id = '2'")
-        users = self.db.cur.fetchall()
-        for user in users:
-            self.comboBox.addItem(user[1], user[0])
+        try:
+            db = DataBase()
+            db.cur.execute("SELECT user_id, full_name FROM cms.users WHERE role_id = '2'")
+            users = db.cur.fetchall()
+            self.comboBox.clear()
+            self.comboBox.addItem("اختر الموظف المستلم...", None)
+            for user_id, name in users:
+                self.comboBox.addItem(name, user_id)
+            db.close()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to load receivers: {str(e)}")
+
+    def handle_case_selection_click(self):
+        btn = self.sender()
+        if btn:
+            btn_id = btn.objectName()
+            if btn_id in self.case_config:
+                config = self.case_config[btn_id]
+                self.current_case_type = config["label"]
+                self.current_template = config["template"]
+                self.label_2.setText(f"أدخل بيانات لائحة دعوى {self.current_case_type}")
 
     def process_full_workflow(self):
         # Validation
-        if not self.current_case_data:
-            QMessageBox.warning(self, "Error", "الرجاء اختيار نوع القضية أولاً!")
+        if not self.current_case_type:
+            QMessageBox.warning(self, "تنبيه", "يرجى اختيار نوع القضية أولاً من القائمة الجانبية.")
             return
 
-        receiver_id = self.comboBox.currentData()
-        if receiver_id is None:
-             QMessageBox.warning(self, "Error", "الرجاء اختيار المستلم!")
-             return
+        receiver_index = self.comboBox.currentIndex()
+        if receiver_index <= 0:
+            QMessageBox.warning(self, "تنبيه", "يرجى اختيار الموظف المستلم.")
+            return
+        receiver_id = self.comboBox.itemData(receiver_index)
+
         # 1. Register Client
         try:
             # Re-open DB connection for transaction
             db = DataBase()
             db.cur.execute("""
-                INSERT INTO cms.client (plaintiff_name, plaintiff_national_id, plaintiff_phone,
+                INSERT INTO cms.client (plaintiff_name, plaintiff_national_id, plaintiff_phone, plaintiff_address,
                                         defendant_name, defendant_national_id, defendant_phone, defendant_address, case_type)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING client_id
             """, (
                 self.plaintiff_name.text(),
                 self.plaintiff_national_id.text(),
                 self.plaintiff_phone.text(),
+                self.plaintiff_address.text(),
                 self.defendant_name.text(),
                 self.defendant_national_id.text(),
                 self.defendant_phone.text(),
@@ -1055,67 +1055,105 @@ class Petition_Clerks(QMainWindow):
              QMessageBox.warning(self, "Error", f"Failed to register client: {str(e)}")
              return
 
-        # 2. Generate File
-        template_name = self.current_case_data.get("template", "لائحة دعوى نفقة زوجة.docx")
-        template_path = f"./files/{template_name}" 
-        if not os.path.exists(template_path):
-            QMessageBox.warning(self, "Error", "Original template not found!")
-            return
-
-        final_dir = os.path.abspath("./files")
-        os.makedirs(final_dir, exist_ok=True)
-        # Sanitize filename: Use Case Type and Plaintiff Name
-        case_type_safe = self.current_case_type.replace("/", "-").replace("\\", "-")
-        plaintiff_name_safe = self.plaintiff_name.text().strip().replace("/", "-").replace("\\", "-")
-        filename = f"{case_type_safe} - {plaintiff_name_safe}.docx"
-        final_file = os.path.join(final_dir, filename)
-        
+        # 2. Generate Document
         try:
-            shutil.copy(template_path, final_file)
-            doc = Document(final_file)
+            template_path = os.path.join("files", self.current_template)
+            if not os.path.exists(template_path):
+                QMessageBox.warning(self, "Error", f"Template file not found: {template_path}")
+                return
+
+            # Prepare filename
+            safe_name = "".join([c for c in self.plaintiff_name.text() if c.isalnum() or c in (' ', '_')]).rstrip()
+            final_filename = f"{self.current_case_type} - {safe_name}.docx"
+            final_file = os.path.join("files", final_filename)
             
+            shutil.copy2(template_path, final_file)
+            doc = Document(final_file)
+
+            # Date Mapping
             days_map = {
-                "Saturday": "السبت", "Sunday": "الأحد", "Monday": "الاثنين", "Tuesday": "الثلاثاء",
-                "Wednesday": "الأربعاء", "Thursday": "الخميس", "Friday": "الجمعة"
+                "Monday": "الإثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء",
+                "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الأحد"
             }
             day_in_arabic = days_map.get(date.today().strftime("%A"), date.today().strftime("%A"))
+
+            # Split address logic
+            p_addr = self.plaintiff_address.text()
+            p_from = p_addr.split('-')[0].strip() if '-' in p_addr else p_addr
+            p_res = p_addr.split('-')[1].strip() if '-' in p_addr else ""
+
+            d_addr = self.defendant_address.text()
+            d_from = d_addr.split('-')[0].strip() if '-' in d_addr else d_addr
+            d_res = d_addr.split('-')[1].strip() if '-' in d_addr else ""
 
             placeholders = {
                 "{DATE_DAY}": day_in_arabic,
                 "{DATE_FULL}": date.today().strftime("%d/%m/%Y"),
                 "{PLAINTIFF_NAME}": self.plaintiff_name.text(),
-                "{PLAINTIFF_ADDRESS}": "غزة معسكر الشاطئ", 
-                "{LAWYER_NAME}": "معتصم كريزم",             
-                "{CLERK_NAME}": "مؤمن كريزم",               
+                "{PLAINTIFF_FROM}": p_from,
+                "{PLAINTIFF_RESIDENT}": p_res,
                 "{DEFENDANT_NAME}": self.defendant_name.text(),
-                "{DEFENDANT_ADDRESS}": self.defendant_address.text(),
-                "{CONTACT_PERSON}": "أحمد محمود",           
-                "{CONTRACT_DATE}": "18/2/2013",             
-                "{INCOME}": "1000",                          
-                "{PROPERTIES}": "خمس عقارات",               
-                "{PROPERTY_INCOME}": "100000 $",             
-                "{TOTAL_INCOME}": "11110000",                
-                "{COURT_NAME}": "محكمة الشجاعية",           
-                "{COURT_ADDRESS}": "غزة شارع النصر",        
-                "{SESSION_DATE}": "9/11/2021",              
+                "{DEFENDANT_FROM}": d_from,
+                "{DEFENDANT_RESIDENT}": d_res,            
             }
 
-            def replace_placeholders(doc, placeholders):
-                for p in doc.paragraphs:
-                    for run in p.runs:
-                        for key, val in placeholders.items():
-                            if key in run.text:
-                                run.text = run.text.replace(key, val)
+            def replace_in_doc(doc, placeholders, p_from, p_res, d_from, d_res):
+                import re
+                
+                # 1. Multi-pass Placeholder Replacement (Robust against run splitting)
+                paragraphs = list(doc.paragraphs)
                 for table in doc.tables:
                     for row in table.rows:
                         for cell in row.cells:
-                            for p in cell.paragraphs:
-                                for run in p.runs:
-                                    for key, val in placeholders.items():
-                                        if key in run.text:
-                                            run.text = run.text.replace(key, val)
+                            paragraphs.extend(list(cell.paragraphs))
+                
+                for p in paragraphs:
+                    full_text = p.text
+                    # A. Standard Placeholder {}
+                    updated_tags = False
+                    for key, val in placeholders.items():
+                        if key in full_text:
+                            full_text = full_text.replace(key, str(val))
+                            updated_tags = True
+                    
+                    # B. Literal Anchors with Underscores (based on user's manual template)
+                    updated_anchors = False
+                    
+                    # Normalized identification (Kashida-agnostic)
+                    # Checking for Plaintiff and Defendant with kashida support
+                    is_plaintiff_line = re.search(r"المدع[ـ]*ية", full_text)
+                    is_defendant_line = re.search(r"المدع[ـ]*ي[ـ]*[\s]*عليه|المدع[ـ]*ى[ـ]*[\s]*عليه", full_text)
+                    
+                    # Handle Plaintiff Line (Heading or Signature)
+                    if is_plaintiff_line and not is_defendant_line:
+                        # Replace anchor "المدعـية/" and any underscores/spaces
+                        full_text = re.sub(r"المدع[ـ]*ية\s*/?[ـ_\s]*", f"المدعية/ {self.plaintiff_name.text()} ", full_text)
+                        
+                        # Replace 'من' and 'وسكان' if they are clearly placeholder markers
+                        full_text = re.sub(r"من[ـ_\s]+", f"من {p_from} ", full_text)
+                        full_text = re.sub(r"وسكان[ـ_\s]+", f"وسكان {p_res} ", full_text)
+                        updated_anchors = True
+                    
+                    # Handle Defendant Line
+                    if is_defendant_line:
+                        # Match "المدعي/المدعى عليه" with or without "/" and underscores
+                        full_text = re.sub(r"(المدع[ـ]*ي[ـ]*\s*عليه|المدع[ـ]*ى[ـ]*\s*عليه)\s*/?[ـ_\s]*", f"المدعى عليه/ {self.defendant_name.text()} ", full_text)
+                        
+                        # Handle 'من' and 'وسكان' specifically for the defendant line
+                        full_text = re.sub(r"من[ـ_\s]+", f"من {d_from} ", full_text)
+                        full_text = re.sub(r"وسكان[ـ_\s]+", f"وسكان {d_res} ", full_text)
+                        updated_anchors = True
 
-            replace_placeholders(doc, placeholders)
+                    if updated_tags or updated_anchors:
+                        if len(p.runs) > 0:
+                            p.runs[0].text = full_text
+                            for i in range(1, len(p.runs)):
+                                p.runs[i].text = ""
+                        else:
+                            p.add_run(full_text)
+
+            # Execution
+            replace_in_doc(doc, placeholders, p_from, p_res, d_from, d_res)
             doc.save(final_file)
             
              # Save to DB
@@ -1165,18 +1203,19 @@ class Petition_Clerks(QMainWindow):
         except Exception as e:
             print(f"Failed to send notification: {e}") # Non-blocking error
 
-        QMessageBox.information(self, "Success", f"Client Registered, File Generated & Sent Successfully!")
+        msg = f"تم تسجيل الموكل، إنشاء الملف وإرساله بنجاح!\n\nالمسار:\n{final_file}"
+        QMessageBox.information(self, "نجاح", msg)
         
         # Clear fields
         self.plaintiff_name.clear()
         self.plaintiff_national_id.clear()
         self.plaintiff_phone.clear()
+        self.plaintiff_address.clear()
         self.defendant_name.clear()
         self.defendant_national_id.clear()
         self.defendant_phone.clear()
         self.defendant_address.clear()
         self.comboBox.setCurrentIndex(0)
-        self.current_case_type = None
         self.label_2.setText("أدخل بيانات لائحة الدعوى:")
 
     def log_out (self):

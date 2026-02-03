@@ -177,7 +177,64 @@ border-radius: 10px;
            <string/>
           </property>
           <property name="placeholderText">
-           <string>عنوان المدعى عليه</string>
+           <string>عنوان المدعى عليه (من - وسكان)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QLineEdit" name="plaintiff_address">
+          <property name="styleSheet">
+           <string notr="true">QLineEdit {
+background-color:white;
+border:none;
+padding:10px;
+font-size: 17px;
+color:#452829;
+border-radius: 10px;
+}</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="placeholderText">
+           <string>عنوان المُدَّعي (من - وسكان)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0" colspan="2">
+         <widget class="QComboBox" name="comboBox">
+          <property name="font">
+           <font>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+          <property name="layoutDirection">
+           <enum>Qt::RightToLeft</enum>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QComboBox {
+    background-color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 16px;
+    color: #452829;
+}
+
+QComboBox:hover {
+    border: none;
+}
+
+QComboBox QAbstractItemView {
+    background-color: white;
+    border: 1px solid #452829;
+    selection-background-color: #452829;
+    selection-color: white;
+    outline: none;
+}</string>
+          </property>
+          <property name="currentText">
+           <string/>
           </property>
          </widget>
         </item>
@@ -198,7 +255,7 @@ border-radius: 10px;
           </property>
          </widget>
         </item>
-        <item row="6" column="1">
+        <item row="7" column="1">
          <spacer name="verticalSpacer_4">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -211,12 +268,12 @@ border-radius: 10px;
           </property>
          </spacer>
         </item>
-        <item row="5" column="1">
+        <item row="6" column="1">
          <widget class="QPushButton" name="sendFile">
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>40</height>
+            <height>50</height>
            </size>
           </property>
           <property name="font">
@@ -238,7 +295,7 @@ border-radius: 10px;
 color:#f3e8df;
 border:none;
 background-color: #452829;
-padding: 10px 30px;
+padding: 5px 30px;
 border-radius: 10px;
 
 }
@@ -246,7 +303,6 @@ border-radius: 10px;
 QPushButton:hover {
     background: white;
 	color:#452829;
-	padding-bottom: 5px;
 }</string>
           </property>
           <property name="text">
@@ -254,7 +310,7 @@ QPushButton:hover {
           </property>
          </widget>
         </item>
-        <item row="6" column="0">
+        <item row="7" column="0">
          <spacer name="verticalSpacer_2">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -267,12 +323,12 @@ QPushButton:hover {
           </property>
          </spacer>
         </item>
-        <item row="5" column="0">
+        <item row="6" column="0">
          <widget class="QPushButton" name="editEmployeeBtn">
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>40</height>
+            <height>50</height>
            </size>
           </property>
           <property name="font">
@@ -291,7 +347,7 @@ QPushButton:hover {
 color:#f3e8df;
 border:none;
 background-color: #452829;
-padding: 10px 30px;
+padding: 5px 30px;
 border-radius:10px;
 
 }
@@ -299,7 +355,6 @@ border-radius:10px;
 QPushButton:hover {
     background: white;
 	color:#452829;
-	padding-bottom: 5px;
 }</string>
           </property>
           <property name="text">
@@ -384,21 +439,6 @@ border-radius: 10px;
           </property>
           <property name="placeholderText">
            <string>رقم جوال المدعى عليه</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="1">
-         <widget class="QComboBox" name="comboBox">
-          <property name="font">
-           <font>
-            <pointsize>10</pointsize>
-           </font>
-          </property>
-          <property name="layoutDirection">
-           <enum>Qt::RightToLeft</enum>
-          </property>
-          <property name="currentText">
-           <string/>
           </property>
          </widget>
         </item>
