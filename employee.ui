@@ -1042,22 +1042,58 @@ border: none;
           <height>0</height>
          </size>
         </property>
-        <property name="styleSheet">
-         <string notr="true">background-color: #452829;
-border: solid 20px #f3db93;</string>
-        </property>
+         <property name="styleSheet">
+          <string notr="true">#sideBar {
+    background-color: #452829;
+}
+
+QPushButton {
+    color: #f3e8df;
+    border: none;
+    outline: none;
+    padding: 10px;
+    background: transparent;
+    border-radius: 0px;
+    text-align: right;
+    padding-right: 22px;
+}
+
+QPushButton:hover {
+    background-color: rgba(0, 0, 0, 40);
+    color: white;
+}
+
+QPushButton[active="true"] {
+    background-color: rgba(0, 0, 0, 80);
+    color: white;
+    font-weight: bold;
+}
+
+#logoutBtn {
+    color: black;
+    background-color: white;
+    border-radius: 10px;
+    text-align: center;
+    padding-right: 0px;
+}
+
+#logoutBtn:hover {
+    background: red;
+    color: white;
+}</string>
+         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
           <number>25</number>
          </property>
          <property name="leftMargin">
-          <number>7</number>
+          <number>0</number>
          </property>
          <property name="topMargin">
           <number>22</number>
          </property>
          <property name="rightMargin">
-          <number>7</number>
+          <number>0</number>
          </property>
          <property name="bottomMargin">
           <number>20</number>
@@ -1080,20 +1116,6 @@ border: solid 20px #f3db93;</string>
            </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-color:#f3e8df;
-border-bottom: 1px solid #f3e8df ;
-padding-bottom: 10px;
-
-}
-
-QPushButton:hover {
-    background: white;
-	color:#452829;
-	padding-bottom: 5px;
-}</string>
            </property>
            <property name="text">
             <string>إضـــــــافة قضــــية ➕</string>
@@ -1119,20 +1141,6 @@ QPushButton:hover {
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-color:#f3e8df;
-border-bottom: 1px solid #f3e8df ;
-padding-bottom: 10px;
-
-}
-
-QPushButton:hover {
-    background: white;
-	color:#452829;
-	padding-bottom: 5px;
-}</string>
-           </property>
            <property name="text">
             <string>ســــجل الأســــــاس 🗄</string>
            </property>
@@ -1156,20 +1164,6 @@ QPushButton:hover {
            </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-color:#f3e8df;
-border-bottom: 1px solid #f3e8df ;
-padding-bottom: 10px;
-
-}
-
-QPushButton:hover {
-    background: white;
-	color:#452829;
-	padding-bottom: 5px;
-}</string>
            </property>
            <property name="text">
             <string>تقويم القــــــــاضي  📅</string>
@@ -1195,20 +1189,6 @@ QPushButton:hover {
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-color:#f3e8df;
-border-bottom: 1px solid #f3e8df ;
-padding-bottom: 10px;
-
-}
-
-QPushButton:hover {
-    background: white;
-	color:#452829;
-	padding-bottom: 5px;
-}</string>
-           </property>
            <property name="text">
             <string>جدولة جلسة جديدة ⏱</string>
            </property>
@@ -1232,20 +1212,6 @@ QPushButton:hover {
            </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-color:#f3e8df;
-border-bottom: 1px solid #f3e8df ;
-padding-bottom: 10px;
-
-}
-
-QPushButton:hover {
-    background: white;
-	color:#452829;
-	padding-bottom: 5px;
-}</string>
            </property>
            <property name="text">
             <string>لوائح الدعـــــــــوى 🧾</string>
@@ -1291,18 +1257,9 @@ QPushButton:hover {
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-color:black;
-background-color: white;
-border-radius: 10px;
-}
-
-QPushButton:hover {
-    background: red;
-	color:white;
-}</string>
-           </property>
+            <property name="styleSheet">
+             <string notr="true"/>
+            </property>
            <property name="text">
             <string>تسجيل خروج</string>
            </property>

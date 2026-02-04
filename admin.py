@@ -31,6 +31,9 @@ class AdminWindow(QMainWindow):
         # ربط الأزرار من الواجهة
         self.addEmployeeBtn.clicked.connect(self.open_add_user_window)
         self.logoutBtn.clicked.connect(self.log_out)
+        
+        self.addEmployeeBtn.setFocusPolicy(Qt.NoFocus)
+        self.logoutBtn.setFocusPolicy(Qt.NoFocus)
 
         self.employeesTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         QFontDatabase.addApplicationFont("fonts/Alyamama-Bold.ttf")       
@@ -212,6 +215,7 @@ class UserWindow(QMainWindow):
         self.update_badge()
 
         menu = QMenu(self)
+        menu.setMinimumWidth(350)
         menu.setStyleSheet("""
             QMenu {
                 background-color: #452829;
@@ -238,20 +242,23 @@ class UserWindow(QMainWindow):
                 item_widget = QWidget()
                 item_widget.setStyleSheet("background-color: transparent;")
                 item_layout = QHBoxLayout(item_widget)
-                item_layout.setContentsMargins(5, 5, 5, 5)
+                item_layout.setContentsMargins(10, 5, 10, 5)
+                item_layout.setDirection(QHBoxLayout.RightToLeft) # Name Right, Time Left
                 
-                # Message Label
+                # Message Label (Expanding)
                 msg_label = QLabel(msg)
                 msg_label.setStyleSheet("color: white; font-weight: bold; font-family: 'Alyamama'; font-size: 14px;")
                 msg_label.setWordWrap(True)
+                msg_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 
-                # Time Label
+                # Time Label (Fixed)
                 time_label = QLabel(time_str)
                 time_label.setStyleSheet("color: #f3db93; font-size: 12px;")
-                time_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                time_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
-                item_layout.addWidget(msg_label)
-                item_layout.addWidget(time_label)
+                # Add widgets: msg stretches to fill space and push time to far left
+                item_layout.addWidget(msg_label, 1)
+                item_layout.addWidget(time_label, 0)
                 
                 action = QWidgetAction(menu)
                 action.setDefaultWidget(item_widget)
@@ -274,30 +281,30 @@ class UserWindow(QMainWindow):
         self.show_documents(highlight_id=document_id)
 
     def reset_sidebar_styles(self):
-        default_style = """
-            QPushButton {
-                color:#f3e8df;
-                border-bottom: 1px solid #f3e8df;
-                padding-bottom: 10px;
-                background: transparent;
-            }
-            QPushButton:hover {
-                background: white;
-                color:#452829;
-                padding-bottom: 5px;
-            }
-        """
-        self.add_case.setStyleSheet(default_style)
-        self.docments.setStyleSheet(default_style)
-        self.master_record.setStyleSheet(default_style)
-        self.btn_scheduling.setStyleSheet(default_style)
-        self.case2.setStyleSheet(default_style)
+        buttons = [self.add_case, self.docments, self.master_record, self.btn_scheduling, self.case2]
+        for btn in buttons:
+            btn.setFocusPolicy(Qt.NoFocus)
+            btn.setProperty("active", False)
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
 
     def show_documents(self, highlight_id=None):
         self.reset_sidebar_styles()
-        self.docments.setStyleSheet(self.docments.styleSheet() + "background: white; color: #452829;")
+        self.docments.setProperty("active", True)
+        self.docments.style().unpolish(self.docments)
+        self.docments.style().polish(self.docments)
         if hasattr(self, 'mainStack'):
             self.mainStack.setCurrentWidget(self.page_documents) # Show documents page
+
+        # Mark all notifications for this user as read when entering documents page
+        try:
+            db_clear = DataBase()
+            db_clear.cur.execute("UPDATE cms.notification SET is_read = TRUE WHERE user_id = %s", (self.current_user_id,))
+            db_clear.conn.commit()
+            db_clear.close()
+            self.update_badge()
+        except Exception as e:
+            print(f"Error clearing notifications: {e}")
 
         # Clear existing items in the grid
         if hasattr(self, 'files_grid'):
@@ -392,6 +399,7 @@ class UserWindow(QMainWindow):
             # Button: Extract Notification File
             btn_extract = QPushButton("استخراج ملف التبليغ")
             btn_extract.setCursor(Qt.PointingHandCursor)
+            btn_extract.setFocusPolicy(Qt.NoFocus)
             btn_extract.setMinimumHeight(40)
             btn_extract.setStyleSheet("""
                 QPushButton {
@@ -411,6 +419,7 @@ class UserWindow(QMainWindow):
             # Button: Open
             btn_open = QPushButton("فتح")
             btn_open.setCursor(Qt.PointingHandCursor)
+            btn_open.setFocusPolicy(Qt.NoFocus)
             btn_open.setMinimumHeight(40)
             btn_open.setStyleSheet("""
                 QPushButton {
@@ -469,7 +478,9 @@ class UserWindow(QMainWindow):
     def show_calendar(self):
         # Highlight active button
         self.reset_sidebar_styles()
-        self.case2.setStyleSheet(self.case2.styleSheet() + "background: white; color: #452829;")
+        self.case2.setProperty("active", True)
+        self.case2.style().unpolish(self.case2)
+        self.case2.style().polish(self.case2)
         
         self.mainStack.setCurrentWidget(self.page_calendar)
         
@@ -553,7 +564,9 @@ class UserWindow(QMainWindow):
 
     def show_master_record(self):
         self.reset_sidebar_styles()
-        self.master_record.setStyleSheet(self.master_record.styleSheet() + "background: white; color: #452829;")
+        self.master_record.setProperty("active", True)
+        self.master_record.style().unpolish(self.master_record)
+        self.master_record.style().polish(self.master_record)
         # 1. جلب بيانات سجل الأساس من قاعدة البيانات
         db = DataBase()
         db.cur.execute("""
@@ -603,7 +616,9 @@ class UserWindow(QMainWindow):
 
     def show_scheduling(self):
         self.reset_sidebar_styles()
-        self.btn_scheduling.setStyleSheet(self.btn_scheduling.styleSheet() + "background: white; color: #452829;")
+        self.btn_scheduling.setProperty("active", True)
+        self.btn_scheduling.style().unpolish(self.btn_scheduling)
+        self.btn_scheduling.style().polish(self.btn_scheduling)
         self.mainStack.setCurrentWidget(self.page_scheduling)
         # Populate table
         # Fetch cases that do NOT have a 'Scheduled' session
@@ -962,6 +977,8 @@ class Petition_Clerks(QMainWindow):
         # Connect main buttons
         self.sendFile.clicked.connect(self.process_full_workflow)
         self.logoutBtn.clicked.connect(self.log_out)
+        self.sendFile.setFocusPolicy(Qt.NoFocus)
+        self.logoutBtn.setFocusPolicy(Qt.NoFocus)
         
         # Case Configurations
         self.case_config = {
@@ -978,6 +995,7 @@ class Petition_Clerks(QMainWindow):
             if hasattr(self, btn_id):
                 btn = getattr(self, btn_id)
                 btn.clicked.connect(self.handle_case_selection_click)
+                btn.setFocusPolicy(Qt.NoFocus)
 
         # Populate Receivers
         self.load_receivers()
@@ -1080,11 +1098,11 @@ class Petition_Clerks(QMainWindow):
             # Split address logic
             p_addr = self.plaintiff_address.text()
             p_from = p_addr.split('-')[0].strip() if '-' in p_addr else p_addr
-            p_res = p_addr.split('-')[1].strip() if '-' in p_addr else ""
+            p_res = p_addr.split('-')[1].strip() if '-' in p_addr else "-"
 
             d_addr = self.defendant_address.text()
             d_from = d_addr.split('-')[0].strip() if '-' in d_addr else d_addr
-            d_res = d_addr.split('-')[1].strip() if '-' in d_addr else ""
+            d_res = d_addr.split('-')[1].strip() if '-' in d_addr else "-"
 
             placeholders = {
                 "{DATE_DAY}": day_in_arabic,
@@ -1126,22 +1144,26 @@ class Petition_Clerks(QMainWindow):
                     
                     # Handle Plaintiff Line (Heading or Signature)
                     if is_plaintiff_line and not is_defendant_line:
-                        # Replace anchor "المدعـية/" and any underscores/spaces
-                        full_text = re.sub(r"المدع[ـ]*ية\s*/?[ـ_\s]*", f"المدعية/ {self.plaintiff_name.text()} ", full_text)
+                        # Only replace if the name is not already there (prevents duplication with {})
+                        if self.plaintiff_name.text() not in full_text:
+                            full_text = re.sub(r"المدع[ـ]*ية\s*/?[ـ_\s]*", f"المدعية/ {self.plaintiff_name.text()} ", full_text)
                         
-                        # Replace 'من' and 'وسكان' if they are clearly placeholder markers
-                        full_text = re.sub(r"من[ـ_\s]+", f"من {p_from} ", full_text)
-                        full_text = re.sub(r"وسكان[ـ_\s]+", f"وسكان {p_res} ", full_text)
+                        if p_from not in full_text:
+                            full_text = re.sub(r"من[ـ_\s]+", f"من {p_from} ", full_text)
+                        if p_res not in full_text:
+                            full_text = re.sub(r"وسكان[ـ_\s]+", f"وسكان {p_res} ", full_text)
                         updated_anchors = True
                     
                     # Handle Defendant Line
                     if is_defendant_line:
-                        # Match "المدعي/المدعى عليه" with or without "/" and underscores
-                        full_text = re.sub(r"(المدع[ـ]*ي[ـ]*\s*عليه|المدع[ـ]*ى[ـ]*\s*عليه)\s*/?[ـ_\s]*", f"المدعى عليه/ {self.defendant_name.text()} ", full_text)
+                        # Only replace if the name is not already there
+                        if self.defendant_name.text() not in full_text:
+                            full_text = re.sub(r"(المدع[ـ]*ي[ـ]*\s*عليه|المدع[ـ]*ى[ـ]*\s*عليه)\s*/?[ـ_\s]*", f"المدعى عليه/ {self.defendant_name.text()} ", full_text)
                         
-                        # Handle 'من' and 'وسكان' specifically for the defendant line
-                        full_text = re.sub(r"من[ـ_\s]+", f"من {d_from} ", full_text)
-                        full_text = re.sub(r"وسكان[ـ_\s]+", f"وسكان {d_res} ", full_text)
+                        if d_from not in full_text:
+                            full_text = re.sub(r"من[ـ_\s]+", f"من {d_from} ", full_text)
+                        if d_res not in full_text:
+                            full_text = re.sub(r"وسكان[ـ_\s]+", f"وسكان {d_res} ", full_text)
                         updated_anchors = True
 
                     if updated_tags or updated_anchors:

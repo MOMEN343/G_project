@@ -8,6 +8,7 @@ from db import DataBase
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("المحكمة الشرعية")
         
         # Main widget and layout
         self.central_widget = QtWidgets.QWidget()
