@@ -2,7 +2,9 @@ import sys
 from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtGui import QFontDatabase
 from PyQt5.QtWidgets import QApplication, QMessageBox
-from admin import AdminWindow, Petition_Clerks, UserWindow
+from admin import AdminWindow
+from petition_clerks import Petition_Clerks
+from user_window import UserWindow
 from db import DataBase
 
 class MainWindow(QtWidgets.QMainWindow):

@@ -170,6 +170,15 @@ class DataBase:
                 ALTER TABLE cms.client ADD COLUMN plaintiff_address TEXT; 
             END IF; 
         END $$;
+
+        -- Add client_id to document if not exists
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='cms' AND table_name='document' AND column_name='client_id') THEN 
+                ALTER TABLE cms.document ADD COLUMN client_id INT;
+                ALTER TABLE cms.document ADD CONSTRAINT fk_document_client FOREIGN KEY (client_id) REFERENCES cms.client(client_id);
+            END IF; 
+        END $$;
         """)
         self.conn.commit()
 

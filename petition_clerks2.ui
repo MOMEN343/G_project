@@ -459,21 +459,39 @@ border-radius: 10px;
          </size>
         </property>
         <property name="styleSheet">
-         <string notr="true">background-color: #452829;
-border: solid 20px #f3db93;</string>
+         <string notr="true">#sideBar {
+    background-color: #452829;
+}
+
+QPushButton {
+    background-color: transparent;
+    border: none;
+}
+
+#logoutBtn {
+    color: black;
+    background-color: white;
+    border-radius: 10px;
+    padding: 5px;
+}
+
+#logoutBtn:hover {
+    background: red;
+    color: white;
+}</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
           <number>25</number>
          </property>
          <property name="leftMargin">
-          <number>7</number>
+          <number>0</number>
          </property>
          <property name="topMargin">
           <number>22</number>
          </property>
          <property name="rightMargin">
-          <number>7</number>
+          <number>0</number>
          </property>
          <property name="bottomMargin">
           <number>20</number>
@@ -615,42 +633,52 @@ QPushButton:hover {
            </property>
           </spacer>
          </item>
-         <item>
-          <widget class="QPushButton" name="logoutBtn">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>40</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>Times New Roman</family>
-             <pointsize>12</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-color:black;
-background-color: white;
-border-radius: 10px;
-}
-
-QPushButton:hover {
-    background: red;
-	color:white;
-}</string>
-           </property>
-           <property name="text">
-            <string>تسجيل خروج</string>
-           </property>
-          </widget>
-         </item>
+          <item alignment="Qt::AlignHCenter">
+           <widget class="QPushButton" name="logoutBtn">
+            <property name="minimumSize">
+             <size>
+              <width>230</width>
+              <height>40</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>230</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Times New Roman</family>
+              <pointsize>12</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
+            <property name="styleSheet">
+             <string notr="true"/>
+            </property>
+            <property name="text">
+             <string>تسجيل الخروج</string>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>icons/log-out-button.png</normaloff>icons/log-out-button.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+           </widget>
+          </item>
         </layout>
        </widget>
       </item>

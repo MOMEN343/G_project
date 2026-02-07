@@ -670,8 +670,143 @@ border-bottom: 3px solid white;
             <property name="bottomMargin">
              <number>0</number>
             </property>
-            <item>
-             <widget class="QScrollArea" name="scrollArea">
+             <item>
+              <widget class="QFrame" name="doc_header">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">#doc_header {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}</string>
+               </property>
+               <property name="frameShape">
+                <enum>QFrame::NoFrame</enum>
+               </property>
+               <property name="frameShadow">
+                <enum>QFrame::Raised</enum>
+               </property>
+               <layout class="QHBoxLayout" name="horizontalLayout_docs_header">
+                <property name="leftMargin">
+                 <number>20</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>20</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QPushButton" name="btn_delete_docs">
+                  <property name="minimumSize">
+                   <size>
+                    <width>45</width>
+                    <height>45</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>45</width>
+                    <height>45</height>
+                   </size>
+                  </property>
+                  <property name="cursor">
+                   <cursorShape>PointingHandCursor</cursorShape>
+                  </property>
+                  <property name="toolTip">
+                   <string>حذف المحدد</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {
+    background-color: transparent;
+    border: none;
+    border-radius: 20px;
+    outline: none;
+}
+QPushButton:hover {
+    background-color: #fff1f0;
+}
+QPushButton:pressed {
+    background-color: #ffccc7;
+}</string>
+                  </property>
+                  <property name="text">
+                   <string/>
+                  </property>
+                  <property name="icon">
+                   <iconset>
+                    <normaloff>icons/recycle-bin-icon.png</normaloff>icons/recycle-bin-icon.png</iconset>
+                  </property>
+                  <property name="iconSize">
+                   <size>
+                    <width>24</width>
+                    <height>24</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="check_all_docs">
+                  <property name="cursor">
+                   <cursorShape>PointingHandCursor</cursorShape>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">QCheckBox {
+    font-weight: bold;
+    color: #452829;
+    margin-left: 20px;
+}
+QCheckBox::indicator {
+    width: 20px;
+    height: 20px;
+}</string>
+                  </property>
+                  <property name="text">
+                   <string>تحديد الكل</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="horizontalSpacer_docs">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label_docs_title">
+                  <property name="styleSheet">
+                   <string notr="true">font-weight: bold; font-size: 16px; color: #452829;</string>
+                  </property>
+                  <property name="text">
+                   <string>إدارة لوائح الدعوى والمستندات</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QScrollArea" name="scrollArea">
               <property name="layoutDirection">
                <enum>Qt::RightToLeft</enum>
               </property>
@@ -688,8 +823,8 @@ border: none;
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>98</width>
-                 <height>28</height>
+                 <width>100</width>
+                 <height>30</height>
                 </rect>
                </property>
                <layout class="QGridLayout" name="files_grid"/>
@@ -1042,8 +1177,8 @@ border: none;
           <height>0</height>
          </size>
         </property>
-         <property name="styleSheet">
-          <string notr="true">#sideBar {
+        <property name="styleSheet">
+         <string notr="true">#sideBar {
     background-color: #452829;
 }
 
@@ -1063,7 +1198,7 @@ QPushButton:hover {
     color: white;
 }
 
-QPushButton[active="true"] {
+QPushButton[active=&quot;true&quot;] {
     background-color: rgba(0, 0, 0, 80);
     color: white;
     font-weight: bold;
@@ -1073,15 +1208,14 @@ QPushButton[active="true"] {
     color: black;
     background-color: white;
     border-radius: 10px;
-    text-align: center;
-    padding-right: 0px;
+    padding: 5px;
 }
 
 #logoutBtn:hover {
     background: red;
     color: white;
 }</string>
-         </property>
+        </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
           <number>25</number>
@@ -1238,12 +1372,18 @@ QPushButton[active="true"] {
            </property>
           </spacer>
          </item>
-         <item>
+         <item alignment="Qt::AlignHCenter">
           <widget class="QPushButton" name="logoutBtn">
            <property name="minimumSize">
             <size>
-             <width>0</width>
+             <width>230</width>
              <height>40</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>230</width>
+             <height>16777215</height>
             </size>
            </property>
            <property name="font">
@@ -1257,11 +1397,25 @@ QPushButton[active="true"] {
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
-            <property name="styleSheet">
-             <string notr="true"/>
-            </property>
+           <property name="layoutDirection">
+            <enum>Qt::RightToLeft</enum>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">padding-right: 45px;
+padding-left: 50px;</string>
+           </property>
            <property name="text">
-            <string>تسجيل خروج</string>
+            <string>تسجيل الخروج</string>
+           </property>
+           <property name="icon">
+            <iconset>
+             <normaloff>icons/log-out-button.png</normaloff>icons/log-out-button.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>30</width>
+             <height>30</height>
+            </size>
            </property>
           </widget>
          </item>
