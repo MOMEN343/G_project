@@ -20,9 +20,15 @@ class AdminWindow(QMainWindow):
         # ربط الأزرار من الواجهة
         self.addEmployeeBtn.clicked.connect(self.open_add_user_window)
         self.editEmployeeBtn.clicked.connect(self.open_edit_user_window)
+        self.deleteEmployeeBtn.clicked.connect(self.delete_employee)
         self.logoutBtn.clicked.connect(self.log_out)
         
+        # ربط خاصية "تحديد الكل" إذا كانت موجودة في الـ UI
+        if hasattr(self, "check_all"):
+            self.check_all.stateChanged.connect(self.select_all_employees)
+        
         self.addEmployeeBtn.setFocusPolicy(Qt.NoFocus)
+        self.deleteEmployeeBtn.setFocusPolicy(Qt.NoFocus)
         self.logoutBtn.setFocusPolicy(Qt.NoFocus)
 
         self.employeesTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -39,6 +45,7 @@ class AdminWindow(QMainWindow):
 
         self.db.cur.execute("""
             SELECT 
+                user_id,
                 username,
                 password,
                 full_name,
@@ -66,16 +73,17 @@ class AdminWindow(QMainWindow):
             checkbox_layout.setAlignment(Qt.AlignCenter)
             checkbox_layout.setContentsMargins(0, 0, 0, 0)
             self.employeesTable.setCellWidget(row_position, 0, checkbox_container)
+            checkbox_container.setProperty("user_id", user[0])
 
             # Add data items in columns 1-7
             items = [
-                QTableWidgetItem((user[0])),
-                QTableWidgetItem((user[1])),
-                QTableWidgetItem((user[2])),
-                QTableWidgetItem((user[3])),
-                QTableWidgetItem((user[4])),
-                QTableWidgetItem((user[5])),
-                QTableWidgetItem(str(user[6]))
+                QTableWidgetItem(user[1]),
+                QTableWidgetItem(user[2]),
+                QTableWidgetItem(user[3]),
+                QTableWidgetItem(user[4]),
+                QTableWidgetItem(user[5]),
+                QTableWidgetItem(user[6]),
+                QTableWidgetItem(str(user[7]))
             ]
             for i, item in enumerate(items):
                 item.setTextAlignment(Qt.AlignCenter)
@@ -90,6 +98,7 @@ class AdminWindow(QMainWindow):
         """فتح نافذة تعديل الموظف المحدد"""
         # البحث عن السطر المحدد (الذي له checkbox مفعّل)
         selected_row = None
+        selected_container = None
         selected_count = 0
         
         for row in range(self.employeesTable.rowCount()):
@@ -99,6 +108,7 @@ class AdminWindow(QMainWindow):
                 checkbox = container.layout().itemAt(0).widget()
                 if checkbox and checkbox.isChecked():
                     selected_row = row
+                    selected_container = container
                     selected_count += 1
         
         # التحقق من تحديد موظف واحد فقط
@@ -112,6 +122,7 @@ class AdminWindow(QMainWindow):
         # جلب بيانات الموظف من الجدول
         employee_data = {
             'row': selected_row,
+            'user_id': selected_container.property("user_id"),
             'username': self.employeesTable.item(selected_row, 1).text(),
             'password': self.employeesTable.item(selected_row, 2).text(),
             'fullname': self.employeesTable.item(selected_row, 3).text(),
@@ -135,8 +146,59 @@ class AdminWindow(QMainWindow):
         self.employeesTable.item(row, 6).setText(status)
         self.employeesTable.item(row, 7).setText(role)
 
+    def delete_employee(self):
+        """حذف الموظفين المحددين"""
+        ids_to_delete = []
+        rows_to_delete = []
+        
+        for row in range(self.employeesTable.rowCount()):
+            container = self.employeesTable.cellWidget(row, 0)
+            if container:
+                checkbox = container.layout().itemAt(0).widget()
+                if checkbox and checkbox.isChecked():
+                    ids_to_delete.append(container.property("user_id"))
+                    rows_to_delete.append(row)
+        
+        if not ids_to_delete:
+            QMessageBox.warning(self, "تنبيه", "الرجاء تحديد موظف واحد على الأقل للحذف")
+            return
+            
+        confirm = QMessageBox.question(
+            self, "تأكيد الحذف",
+            f"هل أنت متأكد من حذف {len(ids_to_delete)} موظف؟\nهذا الإجراء لا يمكن التراجع عنه.",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if confirm == QMessageBox.Yes:
+            try:
+                db = DataBase()
+                for user_id in ids_to_delete:
+                    # قد نحتاج لحذف السجلات المرتبطة أولاً إذا كانت القيود تمنع الحذف المباشر
+                    # لكن هنا سنحاول الحذف المباشر أولاً
+                    db.cur.execute("DELETE FROM cms.users WHERE user_id = %s", (user_id,))
+                
+                db.conn.commit()
+                db.close()
+                QMessageBox.information(self, "نجاح", "تم حذف الموظفين المحددين بنجاح")
+                
+                # تحديث الجدول (الحذف من الأسفل للأعلى للحفاظ علىIndexes)
+                for row in sorted(rows_to_delete, reverse=True):
+                    self.employeesTable.removeRow(row)
+                    
+            except Exception as e:
+                QMessageBox.critical(self, "خطأ", f"حدث خطأ أثناء الحذف:\n{str(e)}\nقد يكون الموظف مرتبطاً بقضايا أو مستندات حالية.")
 
-    def add_row(self, username, password,full_name,email,phone,status,role_id):
+    def select_all_employees(self, state):
+        """تحديد أو إلغاء تحديد جميع الموظفين في الجدول"""
+        is_checked = (state == Qt.Checked)
+        for row in range(self.employeesTable.rowCount()):
+            container = self.employeesTable.cellWidget(row, 0)
+            if container:
+                checkbox = container.layout().itemAt(0).widget()
+                if checkbox:
+                    checkbox.setChecked(is_checked)
+
+    def add_row(self, user_id, username, password,full_name,email,phone,status,role_id):
         row_position = self.employeesTable.rowCount()
         self.employeesTable.insertRow(row_position)
 
@@ -148,6 +210,7 @@ class AdminWindow(QMainWindow):
         checkbox_layout.setAlignment(Qt.AlignCenter)
         checkbox_layout.setContentsMargins(0, 0, 0, 0)
         self.employeesTable.setCellWidget(row_position, 0, checkbox_container)
+        checkbox_container.setProperty("user_id", user_id)
 
         # Add data items in columns 1-7
         items = [
@@ -274,10 +337,10 @@ class AddUserWindow(QMainWindow):
             # وضع التعديل - تحديث البيانات
             db.cur.execute("""
                 UPDATE cms.users 
-                SET password = %s, full_name = %s, email = %s, 
+                SET username = %s, password = %s, full_name = %s, email = %s, 
                     phone = %s, status = %s, role_id = %s
-                WHERE username = %s
-            """, (password, full_name, email, phone, status, role_id, username))
+                WHERE user_id = %s
+            """, (username, password, full_name, email, phone, status, role_id, self.employee_data['user_id']))
             db.conn.commit()
             db.close()
 
@@ -300,7 +363,7 @@ class AddUserWindow(QMainWindow):
             db.close()
 
             # تحديث جدول الموظفين في الواجهة الرئيسية
-            self.admin.add_row(username, password, full_name, email, phone, status, role_name)
+            self.admin.add_row(user_id, username, password, full_name, email, phone, status, role_name)
 
             QMessageBox.information(self, "نجاح", "تم إضافة المستخدم بنجاح")
         

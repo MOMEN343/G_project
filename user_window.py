@@ -1,16 +1,16 @@
 import os
 import shutil
 from docx import Document
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from db import DataBase
-from PyQt5 import uic, QtWidgets
+from PyQt5 import uic, QtWidgets, QtCore
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QScrollArea, 
     QGridLayout, QHBoxLayout, QCheckBox, QMessageBox, QMenu, 
-    QWidgetAction, QFrame
+    QWidgetAction, QFrame, QHeaderView
 )
-from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt, QPoint, QTimer
+from PyQt5.QtGui import QColor, QFontDatabase
+from PyQt5.QtCore import Qt, QPoint, QTimer, QTime
 
 class UserWindow(QMainWindow):
     def __init__(self, current_user_id, main_shell=None):
@@ -79,6 +79,154 @@ class UserWindow(QMainWindow):
              
         if hasattr(self, 'files_grid'):
             self.files_grid.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+
+        # 1. Clean up & Rebuild Calendar Page (The "Image 611" Ultimate Fix)
+        # We handle this in code to ensure perfect alignment regardless of UI file state
+        if hasattr(self, 'page_calendar') and hasattr(self, 'verticalLayout_calendar'):
+            # Aggressively Hide everything that came from the UI file originally
+            for w in self.page_calendar.findChildren(QWidget):
+                if w.objectName() in ["calendarLeftPanel", "calendarHeader", "search_calendar", "btn_calendar_add", "label_calendar_date", "footerLayout"] or \
+                   isinstance(w, (QPushButton, QtWidgets.QLineEdit, QLabel)) and w.parent() == self.page_calendar:
+                    w.hide()
+            
+            # Reset layout to clear any spacers or odd items
+            while self.verticalLayout_calendar.count():
+                child = self.verticalLayout_calendar.takeAt(0)
+                if child.widget(): child.widget().hide()
+
+            # Set background for the calendar page
+            self.page_calendar.setStyleSheet("QWidget#page_calendar { background-color: transparent; }")
+
+            # Create Modern Header
+            self.header_card = QWidget()
+            self.header_card.setFixedHeight(85)
+            h_layout = QHBoxLayout(self.header_card)
+            h_layout.setContentsMargins(30, 20, 30, 10)
+            
+            # 1. Main Title
+            title_lbl = QLabel("🗄 جدول القضاة")
+            title_lbl.setStyleSheet("color: #452829; font-size: 20pt; font-weight: bold;")
+            
+            # 2. Date Navigator (Middle)
+            self.date_nav_box = QWidget()
+            d_layout = QHBoxLayout(self.date_nav_box)
+            d_layout.setSpacing(15)
+            btn_style = "QPushButton { color: #b08d57; font-size: 22px; border: none; background: transparent; font-weight: bold; } QPushButton:hover { color: #452829; }"
+            
+            self.custom_btn_prev = QPushButton("◀")
+            self.custom_btn_prev.setStyleSheet(btn_style)
+            self.custom_label_date = QLabel()
+            self.custom_label_date.setStyleSheet("color: #452829; font-size: 19px; font-family: 'Alyamama';")
+            self.custom_btn_next = QPushButton("▶")
+            self.custom_btn_next.setStyleSheet(btn_style)
+            
+            d_layout.addWidget(self.custom_btn_next)
+            d_layout.addWidget(self.custom_label_date)
+            d_layout.addWidget(self.custom_btn_prev)
+
+            self.custom_search = QtWidgets.QLineEdit()
+            self.custom_search.setPlaceholderText("ابحث في الجدول... 🔍")
+            self.custom_search.setFixedWidth(350)
+            self.custom_search.setFixedHeight(45)
+            self.custom_search.setStyleSheet("""
+                QLineEdit {
+                    background-color: white;
+                    border: 2px solid #e0e0e0;
+                    border-radius: 10px;
+                    padding: 5px 15px;
+                    font-size: 14px;
+                    color: #452829;
+                }
+                QLineEdit:focus {
+                    border: 2px solid #452829;
+                }
+            """)
+
+            # Assemble Header Layout
+            h_layout.addWidget(title_lbl)
+            h_layout.addStretch()
+            h_layout.addWidget(self.date_nav_box)
+            h_layout.addStretch()
+            h_layout.addWidget(self.custom_search)
+
+            # Table Box
+            self.table_box = QFrame()
+            self.table_box.setStyleSheet("QFrame { background-color: #f6f4f2; border-radius: 20px; border: 1px solid #e0e0e0; }")
+            shadow = QtWidgets.QGraphicsDropShadowEffect()
+            shadow.setBlurRadius(25); shadow.setColor(QColor(0,0,0,15)); shadow.setOffset(0,5)
+            self.table_box.setGraphicsEffect(shadow)
+            
+            t_layout = QVBoxLayout(self.table_box)
+            t_layout.setContentsMargins(15, 15, 15, 15)
+            
+            if hasattr(self, 'mainCalendarTable'):
+                self.mainCalendarTable.setParent(self.table_box)
+                t_layout.addWidget(self.mainCalendarTable)
+                self.mainCalendarTable.show()
+                self.mainCalendarTable.setStyleSheet("""
+                    QTableWidget { background-color: transparent; border: none; gridline-color: #f7f7f7; color: #452829; }
+                    QHeaderView::section { background-color: #fcfcfc; color: #452829; font-weight: bold; padding: 15px; border: none; border-bottom: 2px solid #eeeeee; }
+                """)
+                self.mainCalendarTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+            # Assemble
+            self.verticalLayout_calendar.addWidget(self.header_card)
+            self.verticalLayout_calendar.addWidget(self.table_box)
+            self.verticalLayout_calendar.setStretch(1, 1)
+            self.verticalLayout_calendar.setContentsMargins(20, 0, 20, 20)
+
+            # Connections
+            self.current_cal_date = date.today()
+            self.custom_btn_prev.clicked.connect(lambda: self.show_calendar(self.current_cal_date - timedelta(days=1)))
+            self.custom_btn_next.clicked.connect(lambda: self.show_calendar(self.current_cal_date + timedelta(days=1)))
+            self.custom_search.textChanged.connect(self.filter_calendar_table)
+
+        # Force initial state
+        if hasattr(self, 'mainStack') and hasattr(self, 'page_empty'):
+             self.mainStack.setCurrentWidget(self.page_empty)
+        
+        # Point global label to custom one for updates
+        self.label_calendar_date = self.custom_label_date
+        
+        # Reset styles so no buttons are highlighted on start
+        self.reset_sidebar_styles()
+
+    def get_hijri_date_string(self, date):
+        """
+        Converts a Gregorian date to a Hijri date string using a robust iterative algorithm.
+        Matches the Kuwaiti/Tabular Islamic calendar.
+        """
+        try:
+            jd = date.toordinal() + 1721425 + 1
+            days_since_hijra = jd - 1948440
+            cycles = days_since_hijra // 10631
+            rem_days = days_since_hijra % 10631
+            leap_years = [2, 5, 7, 10, 13, 16, 18, 21, 24, 26, 29]
+            year_in_cycle = 0
+            while True:
+                year_in_cycle += 1
+                is_leap = year_in_cycle in leap_years
+                days_in_this_year = 355 if is_leap else 354
+                if rem_days < days_in_this_year:
+                    break
+                rem_days -= days_in_this_year
+            h_year = cycles * 30 + year_in_cycle
+            h_month = 0
+            for m in range(1, 13):
+                h_month = m
+                days_in_this_month = 30 if m % 2 != 0 else 29
+                if m == 12 and (year_in_cycle in leap_years):
+                    days_in_this_month = 30
+                if rem_days < days_in_this_month:
+                    break
+                rem_days -= days_in_this_month
+            h_day = rem_days + 1
+            m_names = ["", "محرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة", 
+                       "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"]
+            return f"{int(h_day)} {m_names[int(h_month)]} {int(h_year)} هـ"
+        except Exception as e:
+            print(f"Hijri Conversion Error: {e}")
+            return "تاريخ غير متوفر"
 
     def update_badge(self):
         try:
@@ -487,55 +635,171 @@ class UserWindow(QMainWindow):
         else:
             self.close()
 
-    def show_calendar(self):
+    def show_calendar(self, selected_qdate=None):
+        db = DataBase()
         self.reset_sidebar_styles()
         self.case2.setProperty("active", True)
         self.case2.style().unpolish(self.case2)
         self.case2.style().polish(self.case2)
         
         self.mainStack.setCurrentWidget(self.page_calendar)
-        self.label_calendar_date.setText(datetime.now().strftime("%B %d, %Y"))
         
-        db = DataBase()
-        db.cur.execute("SELECT full_name FROM cms.users WHERE role_id = 4")
+        # Determine the date to show
+        if selected_qdate:
+             if hasattr(selected_qdate, 'toPyDate'):
+                 selected_date = selected_qdate.toPyDate()
+             elif isinstance(selected_qdate, (date, datetime)):
+                 selected_date = selected_qdate
+             else:
+                 selected_date = date.today()
+        else:
+             selected_date = date.today()
+
+        # Update global state to keep buttons in sync
+        self.current_cal_date = selected_date
+
+        # Update Date Display
+        hijri_str = self.get_hijri_date_string(selected_date)
+        greg_str = selected_date.strftime("%d %B %Y")
+        combined_date = f"{hijri_str}  |  {greg_str}"
+        
+        if hasattr(self, 'label_calendar_date'):
+             self.label_calendar_date.setText(combined_date)
+             self.label_calendar_date.setStyleSheet("color: #452829; font-size: 18px; font-family: 'Alyamama';")
+        
+        # Fetch Judges
+        db.cur.execute("""
+            SELECT user_id, full_name FROM cms.users WHERE role_id = 4 ORDER BY user_id
+        """)
         judges_data = db.cur.fetchall()
-        db.close()
         
-        judge_names = [j[0] for j in judges_data]
-        if not judge_names: judge_names = ["لا يوجد قضاة"]
+        judge_names = ["ساعة"] + [f"القاضي {judge[1]} " for judge in judges_data]
+        j_id = [(j[0],) for j in judges_data] 
         
         table = self.mainCalendarTable
         table.setColumnCount(len(judge_names))
         table.setHorizontalHeaderLabels(judge_names)
-        table.verticalHeader().setVisible(True)
-        table.setRowCount(11)
         
-        hours = [f"{h:02d}:00" for h in range(9, 20)]
-        table.setVerticalHeaderLabels(hours)
-        table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        # Hours from 08:00 to 16:00
+        hours_list = [f"{h:02d}:00" for h in range(8, 17)]
+        table.setRowCount(len(hours_list))
+        table.verticalHeader().setVisible(False)
+        
+        # Style Header
+        table.horizontalHeader().setStyleSheet("""
+            QHeaderView::section { 
+                background-color: #fcfcfc; 
+                font-weight: bold; 
+                border: 1px solid #e0e0e0; 
+                color: #452829;
+                padding: 10px;
+                font-family: 'Alyamama';
+            }
+        """)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         table.clearContents()
+        
+        # Helper to add a high-end styled block
+        def add_session_block(row, col, text, color_type="maroon"):
+            colors = {
+                "maroon": "#452829",
+                "gold": "#b08d57", 
+                "beige": "#ebe3d5"
+            }
+            text_colors = {
+                "maroon": "white",
+                "gold": "white",
+                "beige": "#452829"
+            }
+            
+            bg_color = colors.get(color_type, "#452829")
+            fg_color = text_colors.get(color_type, "white")
+            
+            container = QWidget()
+            container_layout = QVBoxLayout(container)
+            container_layout.setContentsMargins(4, 4, 4, 4)
+            
+            card = QFrame()
+            card.setStyleSheet(f"background-color: {bg_color}; border-radius: 8px; border: none;")
+            card_layout = QVBoxLayout(card)
+            card_layout.setContentsMargins(8, 8, 8, 8)
+            
+            lbl = QLabel(text)
+            lbl.setAlignment(Qt.AlignCenter)
+            lbl.setWordWrap(True)
+            lbl.setStyleSheet(f"color: {fg_color}; font-weight: bold; font-family: 'Alyamama'; font-size: 11px; background: transparent; border: none;")
+            
+            card_layout.addWidget(lbl)
+            container_layout.addWidget(card)
+            table.setCellWidget(row, col, container)
 
-        def add_event(row, col, text, color):
-            item = QtWidgets.QTableWidgetItem(text)
-            item.setBackground(QColor(color))
-            item.setForeground(QColor("white"))
+        # Fill the Time Column
+        for i, h in enumerate(hours_list):
+            item = QtWidgets.QTableWidgetItem(h)
             item.setTextAlignment(Qt.AlignCenter)
+            item.setForeground(QColor("#452829"))
             font = item.font()
             font.setBold(True)
             item.setFont(font)
-            table.setItem(row, col, item)
+            table.setItem(i, 0, item)
 
-        add_event(1, 0, "Check the plan\n10:00-11:00", "#4A90E2")
-        add_event(1, 1, "Rawan, Busy\n10:00-11:00", "#9B9BEE")
-        add_event(1, 2, "Ahmed, Busy\n10:00-11:00", "#A2D9CE")
-        add_event(1, 3, "Yasser, Busy\n10:00-11:00", "#ABEBC6")
-        add_event(1, 5, "Rawan, Busy\n09:00-11:00", "#EB984E")
-        add_event(3, 1, "Rawan, Busy\n12:00-13:00", "#5DADE2")
-        add_event(3, 2, "Ahmed, Busy\n12:00-13:00", "#16A085")
-        add_event(3, 3, "Yasser, Busy\n12:00-13:00", "#2ECC71")
-        add_event(4, 0, "Check the plan\n13:00-14:00", "#1A5276")
-        add_event(4, 1, "Rawan, Busy", "#5499C7")
+        # --- REAL DATABASE SESSIONS ---
+        today_str = selected_date.strftime("%Y-%m-%d")
+        
+        for i, (j_id_val,) in enumerate(j_id):
+            db.cur.execute("""
+                SELECT session_time, case_id
+                FROM cms.session
+                WHERE judge_id = %s AND session_date = %s
+            """, (j_id_val, today_str))
+            sessions = db.cur.fetchall()
+
+            for s_time_val, case_id_val in sessions:
+                # Fetch case details
+                db.cur.execute("SELECT case_number, case_type FROM cms.court_case WHERE case_id = %s", (case_id_val,))
+                case_res = db.cur.fetchone()
+                if not case_res: continue
+                    
+                case_num, case_type = case_res
+                
+                # Format time "HH:00"
+                if hasattr(s_time_val, 'strftime'):
+                    t_str = s_time_val.strftime("%H:00")
+                else:
+                    t_str = str(s_time_val)[:2] + ":00"
+                
+                if t_str in hours_list:
+                    row_idx = hours_list.index(t_str)
+                    color_choice = ["maroon", "gold", "beige"][case_id_val % 3]
+                    add_session_block(row_idx, i + 1, f"{case_type}\n{case_num}", color_choice)
+
+        for i in range(len(hours_list)):
+            table.setRowHeight(i, 70)
+        db.close()
+
+    def filter_calendar_table(self, text):
+        """Filters the sessions inside the calendar table cells based on search text."""
+        table = self.mainCalendarTable
+        search_term = text.lower()
+        
+        for row in range(table.rowCount()):
+            for col in range(table.columnCount()):
+                widget = table.cellWidget(row, col)
+                if widget:
+                    children = widget.findChildren(QLabel)
+                    found = False
+                    for child in children:
+                        if search_term in child.text().lower():
+                            found = True
+                            break
+                    
+                    if not search_term:
+                         widget.setHidden(False)
+                    elif found:
+                         widget.setHidden(False)
+                    else:
+                         widget.setHidden(True)
 
     def filter_master_record(self, text):
         table = self.masterRecordTable
@@ -564,9 +828,10 @@ class UserWindow(QMainWindow):
         self.master_record.setProperty("active", True)
         self.master_record.style().unpolish(self.master_record)
         self.master_record.style().polish(self.master_record)
+        
         db = DataBase()
         db.cur.execute("""
-            SELECT cc.case_id, c.plaintiff_name,c.defendant_name, ct.case_type, ct.filing_date, ct.status
+            SELECT ct.case_number, c.plaintiff_name,c.defendant_name, ct.case_type, ct.filing_date, ct.status
             FROM cms.case_client cc
             JOIN cms.client c ON cc.client_id = c.client_id
             JOIN cms.court_case ct ON cc.case_id = ct.case_id
@@ -577,19 +842,27 @@ class UserWindow(QMainWindow):
 
         table = self.masterRecordTable
         table.verticalHeader().setVisible(False)
+        table.setRowCount(0)
         table.setRowCount(len(records))
-        table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
         
         for row_idx, row_data in enumerate(records):
             for col_idx, value in enumerate(row_data):
                 item = QtWidgets.QTableWidgetItem(str(value))
                 item.setTextAlignment(Qt.AlignCenter)
-                if col_idx == 5:
-                    if str(value) == "جديد": item.setForeground(QColor("#2ECC71"))
-                    elif str(value) == "مغلق": item.setForeground(QColor("#E74C3C"))
+                table.setItem(row_idx, col_idx, item)
+                
+                if col_idx == 5: # Status column
+                    if str(value) == "جديد":
+                        item.setForeground(QColor("#2ECC71"))
+                    elif str(value) == "مغلق":
+                        item.setForeground(QColor("#E74C3C"))
                     font = item.font()
                     font.setBold(True)
                     item.setFont(font)
+                
                 table.setItem(row_idx, col_idx, item)
 
         self.searchMasterRecord.clear()
@@ -601,6 +874,7 @@ class UserWindow(QMainWindow):
         self.btn_scheduling.style().unpolish(self.btn_scheduling)
         self.btn_scheduling.style().polish(self.btn_scheduling)
         self.mainStack.setCurrentWidget(self.page_scheduling)
+        
         db = DataBase()
         db.cur.execute("""
             SELECT cc.case_id, c.plaintiff_name, c.defendant_name, ct.case_type
@@ -617,9 +891,10 @@ class UserWindow(QMainWindow):
         
         self.searchScheduling.clear()
         table = self.schedulingTable
-        table.setRowCount(len(records))
+        table.setRowCount(0)
         table.verticalHeader().setVisible(False)
-        table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        table.setRowCount(len(records))
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         
         self.scheduling_checkboxes = [] 
         for row, data in enumerate(records):
@@ -646,6 +921,10 @@ class UserWindow(QMainWindow):
         for judge in judges:
             self.judgeComboBox.addItem(judge[1], judge[0])
 
+        if hasattr(self, 'sessionTimeInput'):
+            self.sessionTimeInput.setMinimumTime(QTime(8, 0))
+            self.sessionTimeInput.setMaximumTime(QTime(14, 59))
+
     def save_session(self):
         selected_case_id = None
         if not hasattr(self, 'scheduling_checkboxes'): return
@@ -664,9 +943,15 @@ class UserWindow(QMainWindow):
             QMessageBox.warning(self, "تنبيه", "الرجاء اختيار القاضي")
             return
 
+        val_time = self.sessionTimeInput.time()
+        if val_time.hour() < 8 or val_time.hour() > 14:
+             QMessageBox.warning(self, "تنبيه", "وقت الجلسة يجب أن يكون بين 8 صباحاً و 2 ظهراً (14:00) ليظهر في الجدول بشكل صحيح.")
+             return
+
         session_date = self.sessionDateInput.date().toString("yyyy-MM-dd")
-        session_time = self.sessionTimeInput.time().toString("HH:mm")
+        session_time = val_time.toString("HH:mm")
         
+        QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         db = DataBase()
         try:
             db.cur.execute("""
@@ -674,6 +959,7 @@ class UserWindow(QMainWindow):
                 WHERE judge_id = %s AND session_date = %s AND session_time = %s AND status = 'Scheduled'
             """, (judge_id, session_date, session_time))
             if db.cur.fetchone()[0] > 0:
+                QtWidgets.QApplication.restoreOverrideCursor()
                 QMessageBox.warning(self, "تنبيه", "يوجد جلسة أخرى لهذا القاضي في نفس الموعد!")
                 return
 
@@ -702,19 +988,21 @@ class UserWindow(QMainWindow):
                 for p in doc.paragraphs:
                     for run in p.runs:
                         for key, val in placeholders.items():
-                            if key in run.text: run.text = run.text.replace(key, val)
+                            if key in run.text: run.text = run.text.replace(key, str(val))
                 for table in doc.tables:
                     for row in table.rows:
                         for cell in row.cells:
                             for p in cell.paragraphs:
                                 for run in p.runs:
                                     for key, val in placeholders.items():
-                                        if key in run.text: run.text = run.text.replace(key, val)
+                                        if key in run.text: run.text = run.text.replace(key, str(val))
                 doc.save(res[0])
 
+            QtWidgets.QApplication.restoreOverrideCursor()
             QMessageBox.information(self, "نجاح", "تم حفظ الجلسة وتحديث ملف الدعوى بنجاح ✅")
             self.show_scheduling()
         except Exception as e:
+             QtWidgets.QApplication.restoreOverrideCursor()
              QMessageBox.critical(self, "خطأ", f"حدث خطأ أثناء الحفظ: {e}")
         finally:
             db.close()
