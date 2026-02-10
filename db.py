@@ -12,7 +12,6 @@ class DataBase:
             password ="2052005"
         )
         self.cur = self.conn.cursor()
-        self.create_tables()
 
     def create_tables(self):
         

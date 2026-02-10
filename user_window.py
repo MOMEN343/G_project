@@ -1,7 +1,7 @@
 import os
 import shutil
 from docx import Document
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, time, timedelta
 from db import DataBase
 from PyQt5 import uic, QtWidgets, QtCore
 from PyQt5.QtWidgets import (
@@ -747,32 +747,36 @@ class UserWindow(QMainWindow):
         # --- REAL DATABASE SESSIONS ---
         today_str = selected_date.strftime("%Y-%m-%d")
         
-        for i, (j_id_val,) in enumerate(j_id):
-            db.cur.execute("""
-                SELECT session_time, case_id
-                FROM cms.session
-                WHERE judge_id = %s AND session_date = %s
-            """, (j_id_val, today_str))
-            sessions = db.cur.fetchall()
-
-            for s_time_val, case_id_val in sessions:
-                # Fetch case details
-                db.cur.execute("SELECT case_number, case_type FROM cms.court_case WHERE case_id = %s", (case_id_val,))
-                case_res = db.cur.fetchone()
-                if not case_res: continue
-                    
-                case_num, case_type = case_res
-                
-                # Format time "HH:00"
-                if hasattr(s_time_val, 'strftime'):
-                    t_str = s_time_val.strftime("%H:00")
-                else:
-                    t_str = str(s_time_val)[:2] + ":00"
-                
-                if t_str in hours_list:
-                    row_idx = hours_list.index(t_str)
-                    color_choice = ["maroon", "gold", "beige"][case_id_val % 3]
-                    add_session_block(row_idx, i + 1, f"{case_type}\n{case_num}", color_choice)
+        # Build mapping for quick lookup
+        judge_id_to_col = {jid[0]: idx + 1 for idx, jid in enumerate(j_id)}
+        
+        # Fetch all sessions for this day in ONE query
+        db.cur.execute("""
+            SELECT s.session_time, s.case_id, s.judge_id, c.case_number, c.case_type
+            FROM cms.session s
+            JOIN cms.court_case c ON s.case_id = c.case_id
+            WHERE s.session_date = %s AND s.status = 'Scheduled'
+        """, (today_str,))
+        
+        all_sessions = db.cur.fetchall()
+        
+        for s_time_val, case_id_val, judge_id_val, case_num, case_type in all_sessions:
+            if judge_id_val not in judge_id_to_col: continue
+            
+            col_idx = judge_id_to_col[judge_id_val]
+            
+            # Format time "HH:00"
+            if hasattr(s_time_val, 'strftime'):
+                t_str = s_time_val.strftime("%H:00")
+            elif hasattr(s_time_val, 'hour'):
+                t_str = f"{s_time_val.hour:02d}:00"
+            else:
+                t_str = str(s_time_val)[:2] + ":00"
+            
+            if t_str in hours_list:
+                row_idx = hours_list.index(t_str)
+                color_choice = ["maroon", "gold", "beige"][case_id_val % 3]
+                add_session_block(row_idx, col_idx, f"{case_type}\n{case_num}", color_choice)
 
         for i in range(len(hours_list)):
             table.setRowHeight(i, 70)
@@ -948,8 +952,9 @@ class UserWindow(QMainWindow):
              QMessageBox.warning(self, "تنبيه", "وقت الجلسة يجب أن يكون بين 8 صباحاً و 2 ظهراً (14:00) ليظهر في الجدول بشكل صحيح.")
              return
 
-        session_date = self.sessionDateInput.date().toString("yyyy-MM-dd")
-        session_time = val_time.toString("HH:mm")
+        q_date = self.sessionDateInput.date()
+        session_date = date(q_date.year(), q_date.month(), q_date.day())
+        session_time = time(val_time.hour(), val_time.minute())
         
         QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         db = DataBase()
@@ -968,44 +973,55 @@ class UserWindow(QMainWindow):
                 VALUES (%s, %s, %s, %s, %s)
             """, (session_date, session_time, 'Scheduled', selected_case_id, judge_id))
             db.conn.commit()
+            db.close() # Close early
 
-            db.cur.execute("SELECT case_number FROM cms.court_case WHERE case_id = %s", (selected_case_id,))
-            case_number_val = db.cur.fetchone()[0]
+            db_case = DataBase()
+            db_case.cur.execute("SELECT case_number FROM cms.court_case WHERE case_id = %s", (selected_case_id,))
+            case_number_val = db_case.cur.fetchone()[0]
 
-            db.cur.execute("""
+            db_case.cur.execute("""
                 SELECT file_path FROM cms.document
                 WHERE case_id = %s ORDER BY upload_date DESC LIMIT 1
             """, (selected_case_id,))
-            res = db.cur.fetchone()
+            res = db_case.cur.fetchone()
+            db_case.close()
             
             if res and os.path.exists(res[0]):
-                doc = Document(res[0])
-                placeholders = {          
-                    "{CASE_NUMBER}": str(case_number_val),
-                    "{SESSION_DATE}": session_date,
-                    "{SESSION_TIME}": session_time
-                }
-                for p in doc.paragraphs:
-                    for run in p.runs:
-                        for key, val in placeholders.items():
-                            if key in run.text: run.text = run.text.replace(key, str(val))
-                for table in doc.tables:
-                    for row in table.rows:
-                        for cell in row.cells:
-                            for p in cell.paragraphs:
-                                for run in p.runs:
-                                    for key, val in placeholders.items():
-                                        if key in run.text: run.text = run.text.replace(key, str(val))
-                doc.save(res[0])
+                try:
+                    doc = Document(res[0])
+                    # Formatted strings for the document placeholders
+                    date_str = session_date.strftime("%Y-%m-%d")
+                    time_str = session_time.strftime("%H:%M")
+                    
+                    placeholders = {          
+                        "{CASE_NUMBER}": str(case_number_val),
+                        "{SESSION_DATE}": date_str,
+                        "{SESSION_TIME}": time_str
+                    }
+                    for p in doc.paragraphs:
+                        for run in p.runs:
+                            for key, val in placeholders.items():
+                                if key in run.text: run.text = run.text.replace(key, str(val))
+                    for table in doc.tables:
+                        for row in table.rows:
+                            for cell in row.cells:
+                                for p in cell.paragraphs:
+                                    for run in p.runs:
+                                        for key, val in placeholders.items():
+                                            if key in run.text: run.text = run.text.replace(key, str(val))
+                    doc.save(res[0])
+                except Exception as doc_error:
+                    print(f"Error updating Word document: {doc_error}")
 
             QtWidgets.QApplication.restoreOverrideCursor()
             QMessageBox.information(self, "نجاح", "تم حفظ الجلسة وتحديث ملف الدعوى بنجاح ✅")
             self.show_scheduling()
         except Exception as e:
+             if 'db' in locals():
+                 try: db.close()
+                 except: pass
              QtWidgets.QApplication.restoreOverrideCursor()
              QMessageBox.critical(self, "خطأ", f"حدث خطأ أثناء الحفظ: {e}")
-        finally:
-            db.close()
 
     def new_case_dialog(self):
         db = DataBase()

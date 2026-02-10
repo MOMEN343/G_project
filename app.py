@@ -28,6 +28,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stack.addWidget(self.login_widget)
 
         self.db = DataBase()   
+        self.db.create_tables()
 
         if hasattr(self.login_widget, 'splitter'):
             # إخفاء المقبض (Handle) للـ Splitter
