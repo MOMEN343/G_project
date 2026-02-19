@@ -1,0 +1,471 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>JudgeWindow</class>
+ <widget class="QMainWindow" name="JudgeWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1350</width>
+    <height>850</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>بوابة القضاة - المحكمة الشرعية</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="styleSheet">
+    <string notr="true">#centralwidget { background-color: #f3e8df; }</string>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout_main">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <!-- Top Bar -->
+     <widget class="QFrame" name="topBar">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>75</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">#topBar {
+    background-color: #452829;
+    border-bottom: 2px solid #b08d57;
+}
+#topBar QLabel, #topBar QPushButton {
+    background-color: transparent;
+}</string>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_header">
+       <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
+        <widget class="QPushButton" name="notification">
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+         <property name="styleSheet">
+          <string notr="true"> #notification{
+        background-color: transparent;
+        font-size: 30px;
+        color: qconicalgradient(cx:0.5, cy:0.5, angle:0, stop:0 rgba(35, 40, 3, 255), stop:0.16 rgba(136, 106, 22, 255), stop:0.225 rgba(166, 140, 41, 255), stop:0.285 rgba(204, 181, 74, 255), stop:0.345 rgba(235, 219, 102, 255), stop:0.415 rgba(245, 236, 112, 255), stop:0.52 rgba(209, 190, 76, 255), stop:0.57 rgba(187, 156, 51, 255), stop:0.635 rgba(168, 142, 42, 255), stop:0.695 rgba(202, 174, 68, 255), stop:0.75 rgba(218, 202, 86, 255), stop:0.815 rgba(208, 187, 73, 255), stop:0.88 rgba(187, 156, 51, 255), stop:0.935 rgba(137, 108, 26, 255), stop:1 rgba(35, 40, 3, 255))    ;
+    }
+     #notification:hover{
+		color: white;
+    }</string>
+         </property>
+         <property name="text">
+          <string>🔔</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="badge_label">
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">
+            QLabel {
+                background-color: red;
+                color: white;
+                border-radius: 10px;
+                font-size: 11px;
+                font-weight: bold;
+                min-width: 20px;
+                max-width: 20px;
+                min-height: 20px;
+                max-height: 20px;
+                qproperty-alignment: 'AlignCenter';
+            }
+          </string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_header">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="titleLabel">
+         <property name="styleSheet">
+          <string notr="true">color: white; font-size: 30px; font-weight: bold; font-family: 'Alyamama';</string>
+         </property>
+         <property name="text">
+          <string>القـاضي الشـرعي</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="headerIcon">
+         <property name="styleSheet">
+          <string notr="true">font-size: 50px; color: white;</string>
+         </property>
+         <property name="text">
+          <string>⚖️</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="spacerLabel">
+         <property name="styleSheet">
+          <string notr="true">color: transparent;</string>
+         </property>
+         <property name="text">
+          <string>.....</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_body">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <item>
+       <!-- Main Content Area -->
+       <widget class="QWidget" name="mainContentArea">
+        <layout class="QHBoxLayout" name="horizontalLayout_content">
+         <property name="spacing">
+          <number>20</number>
+         </property>
+         <property name="leftMargin">
+          <number>20</number>
+         </property>
+         <property name="topMargin">
+          <number>20</number>
+         </property>
+         <property name="rightMargin">
+          <number>20</number>
+         </property>
+         <property name="bottomMargin">
+          <number>20</number>
+         </property>
+         <item>
+          <!-- Existing Schedule Panel -->
+          <widget class="QFrame" name="schedulePanel">
+           <property name="styleSheet">
+            <string notr="true">#schedulePanel { background-color: white; border-radius: 30px; }</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_sched">
+            <property name="spacing">
+             <number>20</number>
+            </property>
+            <property name="leftMargin">
+             <number>30</number>
+            </property>
+            <property name="topMargin">
+             <number>30</number>
+            </property>
+            <property name="rightMargin">
+             <number>30</number>
+            </property>
+            <property name="bottomMargin">
+             <number>30</number>
+            </property>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_sched_header">
+              <item>
+               <layout class="QVBoxLayout" name="verticalLayout_en_title">
+                <item>
+                 <widget class="QLabel" name="label_title_en">
+                  <property name="styleSheet">
+                   <string notr="true">font-size: 24px; font-weight: bold; color: #452829;</string>
+                  </property>
+                  <property name="text">
+                   <string>Judicial Calendar</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="judge_name_en">
+                  <property name="styleSheet">
+                   <string notr="true">font-size: 14px; color: #777;</string>
+                  </property>
+                  <property name="text">
+                   <string>Judge: Loading...</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_sched">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="verticalLayout_ar_title">
+                <item>
+                 <widget class="QLabel" name="label_title_ar">
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">font-size: 24px; font-weight: bold; color: #452829;</string>
+                  </property>
+                  <property name="text">
+                   <string>جدول المواعيد القضائية</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="judge_name_ar">
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">font-size: 14px; color: #777;</string>
+                  </property>
+                  <property name="text">
+                   <string>القاضي: جاري التحميل...</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_nav">
+              <item>
+               <widget class="QPushButton" name="btn_prev">
+                <property name="styleSheet">
+                 <string notr="true">border: none; font-size: 18px; color: #aaa;</string>
+                </property>
+                <property name="text">
+                 <string>&lt;</string>
+                </property>
+               </widget>
+              </item>
+              <item><spacer name="h1"><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+              <item>
+               <widget class="QPushButton" name="tab_judge">
+                <property name="styleSheet">
+                 <string notr="true">border: none; color: #aaa; font-size: 14px; padding: 0 15px;</string>
+                </property>
+                <property name="text">
+                 <string>القاضي</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="tab_cases">
+                <property name="styleSheet">
+                 <string notr="true">background-color: #ebe3d5; color: #452829; font-weight: bold; border-radius: 17px; border: 1px solid #b08d57; padding: 0 20px; font-size: 14px; height: 35px;</string>
+                </property>
+                <property name="text">
+                 <string>جدول العمل</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="tab_others">
+                <property name="styleSheet">
+                 <string notr="true">border: none; color: #aaa; font-size: 14px; padding: 0 15px;</string>
+                </property>
+                <property name="text">
+                 <string>رئاسة الأول</string>
+                </property>
+               </widget>
+              </item>
+              <item><spacer name="h2"><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+              <item>
+               <widget class="QPushButton" name="btn_next">
+                <property name="styleSheet">
+                 <string notr="true">border: none; font-size: 18px; color: #aaa;</string>
+                </property>
+                <property name="text">
+                 <string>&gt;</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QScrollArea" name="scrollArea">
+              <property name="styleSheet">
+               <string notr="true">border: none; background: transparent;</string>
+              </property>
+              <property name="widgetResizable">
+               <bool>true</bool>
+              </property>
+              <widget class="QWidget" name="scrollAreaWidgetContents">
+               <layout class="QVBoxLayout" name="scroll_layout"/>
+              </widget>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <!-- New Styled Sidebar -->
+       <widget class="QFrame" name="sideBar">
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>250</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">#sideBar {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #3d1f20, stop:0.5 #452829, stop:1 #3d1f20);
+    border-left: 3px solid rgba(176, 141, 87, 0.3);
+}
+
+QPushButton {
+    color: #d4b896;
+    border: none;
+    outline: none;
+    padding: 14px 15px;
+    background: transparent;
+    border-radius: 12px;
+    text-align: right;
+    padding-right: 25px;
+    font-family: 'Alyamama';
+    font-size: 16px;
+    border: 1px solid transparent;
+}
+
+QPushButton:hover {
+    background: rgba(176, 141, 87, 0.2);
+    color: #f5e6d3;
+}
+
+QPushButton[active="true"] {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: white;
+    font-weight: bold;
+    border-right: 5px solid #b08d57;
+    margin-right: 0px;
+}
+
+#logoutBtn {
+    color: #452829;
+    background-color: white;
+    border-radius: 12px;
+    text-align: center;
+    padding: 10px;
+    margin: 10px 15px;
+    font-weight: bold;
+}</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_sidebar">
+         <property name="spacing">
+          <number>5</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>20</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>20</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="btn_calendar_side">
+           <property name="text">
+            <string>تقويم القاضي 📅</string>
+           </property>
+           <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_scale">
+           <property name="text">
+            <string>القضايا الخاصة بي ⚖️</string>
+           </property>
+           <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_book">
+           <property name="text">
+            <string>القرارات والأحكام 📖</string>
+           </property>
+           <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_gear">
+           <property name="text">
+            <string>الإعدادات ⚙️</string>
+           </property>
+           <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="vs">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="logoutBtn">
+           <property name="text">
+            <string>تسجيل الخروج 🚪</string>
+           </property>
+           <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

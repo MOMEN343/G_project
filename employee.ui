@@ -1,0 +1,1391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AdminDashboard</class>
+ <widget class="QMainWindow" name="AdminDashboard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1506</width>
+    <height>925</height>
+   </rect>
+  </property>
+  <property name="cursor">
+   <cursorShape>ArrowCursor</cursorShape>
+  </property>
+  <property name="windowTitle">
+   <string>كاتب الضبط</string>
+  </property>
+  <property name="layoutDirection">
+   <enum>Qt::LeftToRight</enum>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="styleSheet">
+    <string notr="true">#horizontalLayout{
+background-color: #f3e8df;
+}</string>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QFrame" name="topBar">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>70</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">#topBar{
+background-color: #452829;
+border-bottom: 3px solid white;
+}</string>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
+        <widget class="QPushButton" name="notification">
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+         <property name="styleSheet">
+          <string notr="true"> #notification{
+        background-color: transparent;
+        font-size: 30px;
+        color: qconicalgradient(cx:0.5, cy:0.5, angle:0, stop:0 rgba(35, 40, 3, 255), stop:0.16 rgba(136, 106, 22, 255), stop:0.225 rgba(166, 140, 41, 255), stop:0.285 rgba(204, 181, 74, 255), stop:0.345 rgba(235, 219, 102, 255), stop:0.415 rgba(245, 236, 112, 255), stop:0.52 rgba(209, 190, 76, 255), stop:0.57 rgba(187, 156, 51, 255), stop:0.635 rgba(168, 142, 42, 255), stop:0.695 rgba(202, 174, 68, 255), stop:0.75 rgba(218, 202, 86, 255), stop:0.815 rgba(208, 187, 73, 255), stop:0.88 rgba(187, 156, 51, 255), stop:0.935 rgba(137, 108, 26, 255), stop:1 rgba(35, 40, 3, 255))    ;
+    }
+     #notification:hover{
+		color: white;
+    }</string>
+         </property>
+         <property name="text">
+          <string>🔔</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="badge_label">
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::RightToLeft</enum>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">
+            QLabel {
+                background-color: red;
+                color: white;
+                border-radius: 10px;
+                font-size: 11px;
+                font-weight: bold;
+                min-width: 20px;
+                max-width: 20px;
+                min-height: 20px;
+                max-height: 20px;
+                qproperty-alignment: 'AlignCenter';
+            }
+          </string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="fixedSize" stdset="0">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="titleLabel">
+         <property name="font">
+          <font>
+           <pointsize>-1</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">color: white; font-size: 30px; font-weight: bold;</string>
+         </property>
+         <property name="text">
+          <string>كاتـــب الضـبـط</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="maximumSize">
+          <size>
+           <width>40</width>
+           <height>40</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>-1</pointsize>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">font-size: 50px; color: white;</string>
+         </property>
+         <property name="text">
+          <string>🖌</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_4">
+         <property name="styleSheet">
+          <string notr="true">color: transparent;</string>
+         </property>
+         <property name="text">
+          <string>.....</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="sizeConstraint">
+       <enum>QLayout::SetMaximumSize</enum>
+      </property>
+      <item>
+       <layout class="QGridLayout" name="gridLayout">
+        <property name="leftMargin">
+         <number>40</number>
+        </property>
+        <property name="topMargin">
+         <number>20</number>
+        </property>
+        <property name="rightMargin">
+         <number>40</number>
+        </property>
+        <property name="bottomMargin">
+         <number>25</number>
+        </property>
+        <property name="horizontalSpacing">
+         <number>35</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>20</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="QStackedWidget" name="mainStack">
+          <property name="currentIndex">
+           <number>1</number>
+          </property>
+          <widget class="QWidget" name="page_calendar">
+           <layout class="QVBoxLayout" name="verticalLayout_calendar">
+            <item>
+             <layout class="QHBoxLayout" name="calendarHeader">
+              <item>
+               <widget class="QPushButton" name="btn_calendar_today">
+                <property name="styleSheet">
+                 <string notr="true">
+                  QPushButton {
+                    background-color: white;
+                    border: 1px solid #ccc;
+                    border-radius: 5px;
+                    padding: 8px 15px;
+                    color: #333;
+                    font-weight: bold;
+                  }
+                  QPushButton:hover {
+                    background-color: #f0f0f0;
+                  }
+                 </string>
+                </property>
+                <property name="text">
+                 <string>اليوم</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btn_calendar_prev">
+                <property name="styleSheet">
+                 <string notr="true">
+                  QPushButton {
+                    background-color: white;
+                    border: 1px solid #ccc;
+                    border-radius: 5px;
+                    padding: 8px;
+                    min-width: 35px;
+                    font-weight: bold;
+                  }
+                 </string>
+                </property>
+                <property name="text">
+                 <string>&lt;</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btn_calendar_next">
+                <property name="styleSheet">
+                 <string notr="true">
+                  QPushButton {
+                    background-color: white;
+                    border: 1px solid #ccc;
+                    border-radius: 5px;
+                    padding: 8px;
+                    min-width: 35px;
+                    font-weight: bold;
+                  }
+                 </string>
+                </property>
+                <property name="text">
+                 <string>&gt;</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_calendar_date">
+                <property name="font">
+                 <font>
+                  <pointsize>16</pointsize>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: #2c56a1; margin-left: 10px;</string>
+                </property>
+                <property name="text">
+                 <string>May 06, 2025</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="headerSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="layout_view_toggles">
+                <item>
+                 <widget class="QPushButton" name="btn_view_day">
+                  <property name="styleSheet">
+                   <string notr="true">
+                    QPushButton {
+                      background-color: #2c56a1;
+                      color: white;
+                      border: 1px solid #2c56a1;
+                      border-top-left-radius: 5px;
+                      border-bottom-left-radius: 5px;
+                      padding: 8px 20px;
+                      font-weight: bold;
+                    }
+                   </string>
+                  </property>
+                  <property name="text">
+                   <string>اليوم</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_view_week">
+                  <property name="styleSheet">
+                   <string notr="true">
+                    QPushButton {
+                      background-color: white;
+                      border: 1px solid #ccc;
+                      border-left: none;
+                      padding: 8px 20px;
+                      font-weight: bold;
+                    }
+                   </string>
+                  </property>
+                  <property name="text">
+                   <string>الأسبوع</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_view_month">
+                  <property name="styleSheet">
+                   <string notr="true">
+                    QPushButton {
+                      background-color: white;
+                      border: 1px solid #ccc;
+                      border-left: none;
+                      border-top-right-radius: 5px;
+                      border-bottom-right-radius: 5px;
+                      padding: 8px 20px;
+                      font-weight: bold;
+                    }
+                   </string>
+                  </property>
+                  <property name="text">
+                   <string>الشهر</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="calendarMainLayout" stretch="1,4">
+              <item>
+               <widget class="QFrame" name="calendarLeftPanel">
+                <property name="minimumSize">
+                 <size>
+                  <width>280</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">
+                  #calendarLeftPanel {
+                    background-color: rgba(255, 255, 255, 0.5);
+                    border-radius: 15px;
+                    border: 1px solid #e0e0e0;
+                  }
+                  QLabel { border: none; background: transparent; }
+                  QCheckBox { border: none; background: transparent; }
+                 </string>
+                </property>
+                <layout class="QVBoxLayout" name="verticalLayout_leftPanel">
+                 <property name="spacing">
+                  <number>15</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>15</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>15</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>15</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>15</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="calendarTitle">
+                   <property name="font">
+                    <font>
+                     <pointsize>16</pointsize>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>التقويم</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QCalendarWidget" name="miniCalendar">
+                   <property name="minimumSize">
+                    <size>
+                     <width>250</width>
+                     <height>220</height>
+                    </size>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">
+                     QCalendarWidget QWidget { background-color: transparent; }
+                     QCalendarWidget QAbstractItemView:enabled { 
+                         color: #333; 
+                         background-color: white; 
+                         selection-background-color: #2c56a1; 
+                         selection-color: white; 
+                         border-radius: 5px;
+                     }
+                     QCalendarWidget QToolButton {
+                         color: #333;
+                         font-weight: bold;
+                     }
+                    </string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="searchContacts">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">
+                        background-color: white;
+                        border: 1px solid #e0e0e0;
+                        border-radius: 8px;
+                        padding: 5px 10px;
+                    </string>
+                   </property>
+                   <property name="placeholderText">
+                    <string>🔍 بحث عن جلسات...</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_my_calendar">
+                   <property name="font">
+                    <font>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>📅 تقويمي</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QCheckBox" name="check_my_events">
+                   <property name="text">
+                    <string>الجلسات الخاصة بي</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_following">
+                   <property name="font">
+                    <font>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>👤 القضاة الآخرين</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QCheckBox" name="check_judge1">
+                   <property name="styleSheet">
+                    <string notr="true">color: #7b61ff;</string>
+                   </property>
+                   <property name="text">
+                    <string>القاضي أحمد</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QCheckBox" name="check_judge2">
+                   <property name="styleSheet">
+                    <string notr="true">color: #00c48c;</string>
+                   </property>
+                   <property name="text">
+                    <string>القاضي ياسر</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="leftPanelSpacer">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>40</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QTableWidget" name="mainCalendarTable">
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">
+                  QTableWidget {
+                    background-color: white;
+                    border-radius: 15px;
+                    border: 1px solid #e0e0e0;
+                    gridline-color: #f0f0f0;
+                  }
+                  QHeaderView::section {
+                    background-color: #f7f7f7;
+                    padding: 10px;
+                    border: 1px solid #e0e0e0;
+                    font-weight: bold;
+                    font-size: 14px;
+                  }
+                 </string>
+                </property>
+                <property name="rowCount">
+                 <number>12</number>
+                </property>
+                <property name="columnCount">
+                 <number>6</number>
+                </property>
+                <row/>
+                <row/>
+                <row/>
+                <row/>
+                <row/>
+                <row/>
+                <row/>
+                <row/>
+                <row/>
+                <row/>
+                <row/>
+                <row/>
+                <column/>
+                <column/>
+                <column/>
+                <column/>
+                <column/>
+                <column/>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="footerLayout">
+              <item>
+               <spacer name="footerSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btn_calendar_fab">
+                <property name="styleSheet">
+                 <string notr="true">
+                  QPushButton {
+                    background-color: #2c56a1;
+                    color: white;
+                    font-size: 30px;
+                    border-radius: 30px;
+                    min-width: 60px;
+                    max-width: 60px;
+                    min-height: 60px;
+                    max-height: 60px;
+                    font-weight: bold;
+                  }
+                  QPushButton:hover {
+                    background-color: #1a3a7a;
+                  }
+                 </string>
+                </property>
+                <property name="text">
+                 <string>+</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="page_empty">
+           <layout class="QVBoxLayout" name="verticalLayout_empty">
+            <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
+             <widget class="QLabel" name="label_2">
+              <property name="styleSheet">
+               <string notr="true">color: rgba(120, 120, 120, 0.6);</string>
+              </property>
+              <property name="text">
+               <string>لا يوجد بيانات لعرضها !</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="page_documents">
+           <layout class="QVBoxLayout" name="verticalLayout_docs">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+             <item>
+              <widget class="QFrame" name="doc_header">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">#doc_header {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}</string>
+               </property>
+               <property name="frameShape">
+                <enum>QFrame::NoFrame</enum>
+               </property>
+               <property name="frameShadow">
+                <enum>QFrame::Raised</enum>
+               </property>
+               <layout class="QHBoxLayout" name="horizontalLayout_docs_header">
+                <property name="leftMargin">
+                 <number>20</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>20</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QPushButton" name="btn_delete_docs">
+                  <property name="minimumSize">
+                   <size>
+                    <width>45</width>
+                    <height>45</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>45</width>
+                    <height>45</height>
+                   </size>
+                  </property>
+                  <property name="cursor">
+                   <cursorShape>PointingHandCursor</cursorShape>
+                  </property>
+                  <property name="toolTip">
+                   <string>حذف المحدد</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {
+    background-color: transparent;
+    border: none;
+    border-radius: 20px;
+    outline: none;
+}
+QPushButton:hover {
+    background-color: #fff1f0;
+}
+QPushButton:pressed {
+    background-color: #ffccc7;
+}</string>
+                  </property>
+                  <property name="text">
+                   <string/>
+                  </property>
+                  <property name="icon">
+                   <iconset>
+                    <normaloff>icons/recycle-bin-icon.png</normaloff>icons/recycle-bin-icon.png</iconset>
+                  </property>
+                  <property name="iconSize">
+                   <size>
+                    <width>24</width>
+                    <height>24</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="check_all_docs">
+                  <property name="cursor">
+                   <cursorShape>PointingHandCursor</cursorShape>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">QCheckBox {
+    font-weight: bold;
+    color: #452829;
+    margin-left: 20px;
+}
+QCheckBox::indicator {
+    width: 20px;
+    height: 20px;
+}</string>
+                  </property>
+                  <property name="text">
+                   <string>تحديد الكل</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="horizontalSpacer_docs">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label_docs_title">
+                  <property name="styleSheet">
+                   <string notr="true">font-weight: bold; font-size: 16px; color: #452829;</string>
+                  </property>
+                  <property name="text">
+                   <string>إدارة لوائح الدعوى والمستندات</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QScrollArea" name="scrollArea">
+              <property name="layoutDirection">
+               <enum>Qt::RightToLeft</enum>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">#scrollArea{
+border: none;
+}</string>
+              </property>
+              <property name="widgetResizable">
+               <bool>true</bool>
+              </property>
+              <widget class="QWidget" name="files_widget">
+               <property name="geometry">
+                <rect>
+                 <x>0</x>
+                 <y>0</y>
+                 <width>100</width>
+                 <height>30</height>
+                </rect>
+               </property>
+               <layout class="QGridLayout" name="files_grid"/>
+              </widget>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="page_master_record">
+           <layout class="QVBoxLayout" name="verticalLayout_master">
+            <property name="spacing">
+             <number>20</number>
+            </property>
+            <item>
+             <layout class="QHBoxLayout" name="masterHeaderLayout">
+              <item>
+               <widget class="QLabel" name="label_master_title">
+                <property name="font">
+                 <font>
+                  <pointsize>20</pointsize>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: #452829;</string>
+                </property>
+                <property name="text">
+                 <string>🗄 سجل الأســــاس</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="masterHeaderSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="searchMasterRecord">
+                <property name="minimumSize">
+                 <size>
+                  <width>350</width>
+                  <height>40</height>
+                 </size>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">
+                    QLineEdit {
+                        background-color: white;
+                        border: 2px solid #e0e0e0;
+                        border-radius: 10px;
+                        padding: 5px 15px;
+                        font-size: 14px;
+                    }
+                    QLineEdit:focus {
+                        border: 2px solid #452829;
+                    }
+                  </string>
+                </property>
+                <property name="placeholderText">
+                 <string>🔍 ابحث برقم القضية أو اسم الخصوم...</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QTableWidget" name="masterRecordTable">
+              <property name="layoutDirection">
+               <enum>Qt::RightToLeft</enum>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">
+                  QTableWidget {
+                    background-color: white;
+                    border-radius: 15px;
+                    border: 1px solid #e0e0e0;
+                    gridline-color: #f0f0f0;
+                    selection-background-color: #f3e8df;
+                    selection-color: #452829;
+                  }
+                  QHeaderView::section {
+                    background-color: #452829;
+                    color: white;
+                    padding: 12px;
+                    border: none;
+                    font-weight: bold;
+                    font-size: 14px;
+                  }
+                  QTableWidget::item {
+                    padding: 10px;
+                    border-bottom: 1px solid #f0f0f0;
+                  }
+                </string>
+              </property>
+              <property name="editTriggers">
+               <set>QAbstractItemView::NoEditTriggers</set>
+              </property>
+              <property name="selectionBehavior">
+               <enum>QAbstractItemView::SelectRows</enum>
+              </property>
+              <column>
+               <property name="text">
+                <string>رقم القضية</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>اسم المدعي</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>اسم المدعى عليه</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>نوع القضية</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>تاريخ الملف</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>حالة القضية</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="page_scheduling">
+           <layout class="QVBoxLayout" name="verticalLayout_scheduling">
+            <property name="spacing">
+             <number>20</number>
+            </property>
+            <item>
+             <layout class="QHBoxLayout" name="schedulingHeaderLayout">
+              <item>
+               <widget class="QLabel" name="label_scheduling_title">
+                <property name="font">
+                 <font>
+                  <pointsize>20</pointsize>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: #452829;</string>
+                </property>
+                <property name="text">
+                 <string>📅 جدولة جلسة جديدة</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="schedulingHeaderSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="searchScheduling">
+                <property name="minimumSize">
+                 <size>
+                  <width>350</width>
+                  <height>40</height>
+                 </size>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">
+                    QLineEdit {
+                        background-color: white;
+                        border: 2px solid #e0e0e0;
+                        border-radius: 10px;
+                        padding: 5px 15px;
+                        font-size: 14px;
+                    }
+                    QLineEdit:focus {
+                        border: 2px solid #452829;
+                    }
+                  </string>
+                </property>
+                <property name="placeholderText">
+                 <string>🔍 بحث عن قضية لجدولتها...</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QTableWidget" name="schedulingTable">
+              <property name="layoutDirection">
+               <enum>Qt::RightToLeft</enum>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">
+                  QTableWidget {
+                    background-color: white;
+                    border-radius: 15px;
+                    border: 1px solid #e0e0e0;
+                    gridline-color: #f0f0f0;
+                    selection-background-color: #f3e8df;
+                    selection-color: #452829;
+                  }
+                  QHeaderView::section {
+                    background-color: #452829;
+                    color: white;
+                    padding: 12px;
+                    border: none;
+                    font-weight: bold;
+                    font-size: 14px;
+                  }
+                  QTableWidget::item {
+                    padding: 10px;
+                    border-bottom: 1px solid #f0f0f0;
+                  }
+                </string>
+              </property>
+              <property name="editTriggers">
+               <set>QAbstractItemView::NoEditTriggers</set>
+              </property>
+              <property name="selectionBehavior">
+               <enum>QAbstractItemView::SelectRows</enum>
+              </property>
+              <column>
+               <property name="text">
+                <string>اختيار</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>رقم القضية</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>اسم المدعي</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>اسم المدعى عليه</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>نوع القضية</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_scheduling">
+              <item>
+               <widget class="QLabel" name="label_judge">
+                <property name="text">
+                 <string>القاضي:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="judgeComboBox">
+                <property name="minimumSize">
+                 <size>
+                  <width>150</width>
+                  <height>30</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_date">
+                <property name="text">
+                 <string>تاريخ الجلسة:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QDateEdit" name="sessionDateInput">
+                <property name="calendarPopup">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_time">
+                <property name="text">
+                 <string>وقت الجلسة:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QTimeEdit" name="sessionTimeInput"/>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btn_save_session">
+              <property name="styleSheet">
+               <string notr="true">
+                background-color: #452829;
+                color: white;
+                font-size: 14px;
+                padding: 10px;
+                border-radius: 5px;
+               </string>
+              </property>
+              <property name="text">
+               <string>حفظ الجلسة</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QFrame" name="sideBar">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">#sideBar {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #3d1f20, stop:0.5 #452829, stop:1 #3d1f20);
+    border-left: 3px solid rgba(176, 141, 87, 0.3);
+}
+
+QPushButton {
+    color: #d4b896;
+    border: none;
+    outline: none;
+    padding: 14px 15px;
+    background: transparent;
+    border-radius: 12px;
+    text-align: center;
+    font-family: 'Alyamama';
+    font-size: 20px;
+    border: 1px solid transparent;
+}
+
+QPushButton:hover {
+    background: rgba(176, 141, 87, 0.2);
+    color: #f5e6d3;
+}
+
+QPushButton[active=&quot;true&quot;] {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: white;
+    font-weight: bold;
+    border-right: 5px solid #b08d57;
+    margin-right: 0px;
+}
+
+#logoutBtn {
+    color: #452829;
+    background-color: white;
+    border-radius: 12px;
+    text-align: center;
+    padding: 10px;
+    margin: 10px 15px;
+    font-weight: bold;
+}</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <property name="spacing">
+          <number>15</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>22</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>20</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="add_case">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>40</height>
+            </size>
+           </property>
+
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="text">
+            <string>إضـــــــافة قضــــية ➕</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="master_record">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>40</height>
+            </size>
+           </property>
+
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="text">
+            <string>ســــجل الأســــــاس 🗄</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="case2">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>40</height>
+            </size>
+           </property>
+
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="text">
+            <string>تقويم القــــــــاضي  📅</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_scheduling">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>40</height>
+            </size>
+           </property>
+
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="text">
+            <string>جدولة الجلســــــات ⏱</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="docments">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>40</height>
+            </size>
+           </property>
+
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="text">
+            <string>لوائح الدعـــــــــوى 🧾</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item alignment="Qt::AlignHCenter">
+          <widget class="QPushButton" name="logoutBtn">
+           <property name="minimumSize">
+            <size>
+             <width>230</width>
+             <height>40</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>230</width>
+             <height>16777215</height>
+            </size>
+           </property>
+
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="layoutDirection">
+            <enum>Qt::RightToLeft</enum>
+           </property>
+
+           <property name="text">
+            <string>تسجيل الخروج</string>
+           </property>
+           <property name="icon">
+            <iconset>
+             <normaloff>icons/log-out-button.png</normaloff>icons/log-out-button.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>30</width>
+             <height>30</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
