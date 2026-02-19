@@ -5,7 +5,9 @@ from PyQt5.QtWidgets import QApplication, QMessageBox
 from admin import AdminWindow
 from petition_clerks import Petition_Clerks
 from user_window import UserWindow
+
 from judge_window import JudgeWindow
+
 from db import DataBase
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -137,6 +139,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.stack.setCurrentWidget(self.petition_clerk_dashboard)
                 self.login_widget.username.clear()
                 self.login_widget.password.clear()
+
                 
             elif us == result[1] and ps == result[2] and (result[7] == 4):
                 self.judge_dashboard = JudgeWindow(result[0], main_shell=self)

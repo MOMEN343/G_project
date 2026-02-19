@@ -1218,11 +1218,47 @@ QPushButton[active=&quot;true&quot;] {
     padding: 10px;
     margin: 10px 15px;
     font-weight: bold;
+    background-color: #452829;
+}
+
+QPushButton {
+    color: #f3e8df;
+    border: none;
+    outline: none;
+    padding: 10px;
+    background: transparent;
+    border-radius: 0px;
+    text-align: right;
+    padding-right: 22px;
+}
+
+QPushButton:hover {
+    background-color: rgba(0, 0, 0, 40);
+    color: white;
+}
+
+QPushButton[active=&quot;true&quot;] {
+    background-color: rgba(0, 0, 0, 80);
+    color: white;
+    font-weight: bold;
+}
+
+#logoutBtn {
+    color: black;
+    background-color: white;
+    border-radius: 10px;
+    padding: 5px;
+}
+
+#logoutBtn:hover {
+    background: red;
+    color: white;
 }</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
           <number>15</number>
+          <number>25</number>
          </property>
          <property name="leftMargin">
           <number>0</number>
@@ -1245,6 +1281,14 @@ QPushButton[active=&quot;true&quot;] {
             </size>
            </property>
 
+           <property name="font">
+            <font>
+             <family>Times New Roman</family>
+             <pointsize>12</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
@@ -1262,6 +1306,14 @@ QPushButton[active=&quot;true&quot;] {
             </size>
            </property>
 
+           <property name="font">
+            <font>
+             <family>Times New Roman</family>
+             <pointsize>12</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
@@ -1279,6 +1331,14 @@ QPushButton[active=&quot;true&quot;] {
             </size>
            </property>
 
+           <property name="font">
+            <font>
+             <family>Times New Roman</family>
+             <pointsize>12</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
@@ -1296,11 +1356,20 @@ QPushButton[active=&quot;true&quot;] {
             </size>
            </property>
 
+           <property name="font">
+            <font>
+             <family>Times New Roman</family>
+             <pointsize>12</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="text">
             <string>جدولة الجلســــــات ⏱</string>
+            <string>جدولة جلسة جديدة ⏱</string>
            </property>
           </widget>
          </item>
@@ -1313,6 +1382,14 @@ QPushButton[active=&quot;true&quot;] {
             </size>
            </property>
 
+           <property name="font">
+            <font>
+             <family>Times New Roman</family>
+             <pointsize>12</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
@@ -1356,6 +1433,14 @@ QPushButton[active=&quot;true&quot;] {
             </size>
            </property>
 
+           <property name="font">
+            <font>
+             <family>Times New Roman</family>
+             <pointsize>12</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
@@ -1363,6 +1448,10 @@ QPushButton[active=&quot;true&quot;] {
             <enum>Qt::RightToLeft</enum>
            </property>
 
+           <property name="styleSheet">
+            <string notr="true">padding-right: 45px;
+padding-left: 50px;</string>
+           </property>
            <property name="text">
             <string>تسجيل الخروج</string>
            </property>
