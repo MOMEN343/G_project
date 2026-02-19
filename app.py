@@ -9,6 +9,7 @@ from user_window import UserWindow
 from judge_window import JudgeWindow
 
 from db import DataBase
+from modern_login import ModernLoginWidget
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -24,9 +25,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stack = QtWidgets.QStackedWidget()
         self.layout.addWidget(self.stack)
 
-        # Login Screen setup
-        self.login_widget = QtWidgets.QWidget()
-        uic.loadUi("login.ui", self.login_widget)
+        # Login Screen setup (Modern Version)
+        self.login_widget = ModernLoginWidget()
+        # Old UI loading (fallback)
+        # self.login_widget = QtWidgets.QWidget()
+        # uic.loadUi("login.ui", self.login_widget)
         self.stack.addWidget(self.login_widget)
 
         self.db = DataBase()   
@@ -62,26 +65,27 @@ class MainWindow(QtWidgets.QMainWindow):
         # Load fonts
         QFontDatabase.addApplicationFont("fonts/Alyamama-Bold.ttf")
         
-        # Apply Stylesheets
-        self.login_widget.courtTitle.setStyleSheet("""
-            * {
-                font-family: "Alyamama";
-                color: white;
-            }
-        """)
-        self.login_widget.loginLabel.setStyleSheet("""
-            * {
-                font-family: "Alyamama";
-                background-color: white;
-                color:#452829;                        
-            }
-        """)
-        self.login_widget.loginButton.setStyleSheet("""
-            * {
-                font-family: "Alyamama";            
-                font-size: 20px         
-            }
-        """)
+        # Apply Stylesheets ONLY if it's the old UI
+        if hasattr(self.login_widget, 'splitter'):
+            self.login_widget.courtTitle.setStyleSheet("""
+                * {
+                    font-family: "Alyamama";
+                    color: white;
+                }
+            """)
+            self.login_widget.loginLabel.setStyleSheet("""
+                * {
+                    font-family: "Alyamama";
+                    background-color: white;
+                    color:#452829;                        
+                }
+            """)
+            self.login_widget.loginButton.setStyleSheet("""
+                * {
+                    font-family: "Alyamama";            
+                    font-size: 20px         
+                }
+            """)
 
         self.showMaximized()
         QtCore.QTimer.singleShot(100, self.login_widget.username.clearFocus)
@@ -95,11 +99,26 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.MouseButtonPress:
-            # لو ضغط خارج الحقول
-            if not (self.login_widget.username.geometry().contains(event.pos()) or 
-                    self.login_widget.password.geometry().contains(event.pos())):
-                self.login_widget.username.clearFocus()
-                self.login_widget.password.clearFocus()
+            # Check if using the modern login widget
+            if hasattr(self.login_widget, 'card'):
+                click_pos = event.pos()
+                user_rect = self.login_widget.username.rect()
+                user_pos = self.login_widget.username.mapTo(self.login_widget, QtCore.QPoint(0,0))
+                pass_rect = self.login_widget.password.rect()
+                pass_pos = self.login_widget.password.mapTo(self.login_widget, QtCore.QPoint(0,0))
+
+                on_user = user_rect.translated(user_pos).contains(click_pos)
+                on_pass = pass_rect.translated(pass_pos).contains(click_pos)
+
+                if not (on_user or on_pass):
+                    self.login_widget.username.clearFocus()
+                    self.login_widget.password.clearFocus()
+            else:
+                # Old logic
+                if not (self.login_widget.username.geometry().contains(event.pos()) or 
+                        self.login_widget.password.geometry().contains(event.pos())):
+                    self.login_widget.username.clearFocus()
+                    self.login_widget.password.clearFocus()
         return super().eventFilter(obj, event)
 
     def handle_login(self):
