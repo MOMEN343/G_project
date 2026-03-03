@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 from docx import Document
 from datetime import datetime, date, time, timedelta
@@ -12,6 +13,13 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QColor, QFontDatabase
 from PyQt5.QtCore import Qt, QPoint, QTimer, QTime
 
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 class UserWindow(QMainWindow):
     def __init__(self, current_user_id, main_shell=None):
         super().__init__()
@@ -20,7 +28,7 @@ class UserWindow(QMainWindow):
         self.db = DataBase()
 
         # Load the new UI
-        uic.loadUi("employee.ui", self)
+        uic.loadUi(resource_path("employee.ui"), self)
         
         self.setStyleSheet("""
         * {
@@ -312,7 +320,7 @@ class UserWindow(QMainWindow):
                 action.setDefaultWidget(item_widget)
                 
                 if doc_id:
-                     action.triggered.connect(lambda checked, d=doc_id: self.handle_notification_click(d))
+                     action.triggered.connect(lambda checked=False, d=doc_id: self.handle_notification_click(d))
                 
                 menu.addAction(action)
                 menu.addSeparator()
@@ -441,7 +449,7 @@ class UserWindow(QMainWindow):
                     color: black;
                 }
             """)
-            btn_extract.clicked.connect(lambda checked, d=doc_id: self.extract_notification_file(d))
+            btn_extract.clicked.connect(lambda checked=False, d=doc_id: self.extract_notification_file(d))
 
             btn_open = QPushButton("فتح")
             btn_open.setCursor(Qt.PointingHandCursor)
@@ -460,7 +468,7 @@ class UserWindow(QMainWindow):
                     color: black;
                 }
             """)
-            btn_open.clicked.connect(lambda checked, p=file_path: self.open_file(p))
+            btn_open.clicked.connect(lambda checked=False, p=file_path: self.open_file(p))
 
             layout.addWidget(icon)
             layout.addWidget(name_label)
@@ -541,14 +549,14 @@ class UserWindow(QMainWindow):
             defendant_address = defendant_address if defendant_address else ""
             doc_type = doc_type if doc_type else "-"
 
-            template_path = os.path.join("files", "إعلان خصوم.docx")
+            template_path = os.path.join(self.db.files_path, "إعلان خصوم.docx")
             if not os.path.exists(template_path):
                 QMessageBox.warning(self, "خطأ", f"قالب إعلان الخصوم غير موجود:\n{template_path}")
                 return
             
             safe_name = "".join([c for c in plaintiff_name if c.isalnum() or c in (' ', '_')]).rstrip()
             final_filename = f"إعلان خصوم - {safe_name}.docx"
-            final_file_path = os.path.join("files", final_filename)
+            final_file_path = os.path.join(self.db.files_path, final_filename)
             shutil.copy2(template_path, final_file_path)
             
             doc = Document(final_file_path)
@@ -621,13 +629,27 @@ class UserWindow(QMainWindow):
             
     def open_file(self, file_path):
         try:
-            abs_path = os.path.abspath(file_path)
-            if os.path.exists(abs_path):
-                os.startfile(abs_path)
+            # Normalize path
+            file_path = file_path.replace('/', '\\')
+            
+            # 1. Try the stored path directly
+            if os.path.exists(file_path):
+                os.startfile(os.path.abspath(file_path))
+                return
+            
+            # 2. Try relative to the configured files_path (Crucial for network/other machines)
+            filename = os.path.basename(file_path)
+            net_path = os.path.join(self.db.files_path, filename)
+            
+            if os.path.exists(net_path):
+                os.startfile(net_path)
             else:
-                QMessageBox.warning(self, "Error", f"File not found at:\n{abs_path}")
+                QMessageBox.warning(self, "خطأ في فتح الملف", 
+                    f"لم يتم العثور على الملف في المسار المحلي أو في مسار الشبكة:\n\n"
+                    f"المسار المحاول: {net_path}\n\n"
+                    "تأكد من أن جهاز السيرفر (MoAlshanti) متاح وأن مجلد files تمت مشاركته.")
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Could not open file: {e}")
+            QMessageBox.warning(self, "خطأ", f"تعذر فتح الملف: {e}")
             
     def log_out(self):
         if self.main_shell:

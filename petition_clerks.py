@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import random
 from datetime import date, datetime
@@ -7,6 +8,13 @@ from db import DataBase
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QMessageBox
 from PyQt5.QtCore import Qt, QTimer
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 class Petition_Clerks(QMainWindow):
     def __init__(self, current_user_id, main_shell=None):
@@ -17,7 +25,7 @@ class Petition_Clerks(QMainWindow):
         self.current_case_type = None
         self.current_template = None
 
-        uic.loadUi("petition_clerks2.ui", self)
+        uic.loadUi(resource_path("petition_clerks2.ui"), self)
         self.setStyleSheet("""
         * {
             font-family: "Alyamama";
@@ -114,14 +122,14 @@ class Petition_Clerks(QMainWindow):
              return
 
         try:
-            template_path = os.path.join("files", self.current_template)
+            template_path = os.path.join(self.db.files_path, self.current_template)
             if not os.path.exists(template_path):
                 QMessageBox.warning(self, "Error", f"Template file not found: {template_path}")
                 return
 
             safe_name = "".join([c for c in self.plaintiff_name.text() if c.isalnum() or c in (' ', '_')]).rstrip()
             final_filename = f"{self.current_case_type} - {safe_name}.docx"
-            final_file = os.path.join("files", final_filename)
+            final_file = os.path.join(self.db.files_path, final_filename)
             shutil.copy2(template_path, final_file)
             doc = Document(final_file)
 
@@ -196,6 +204,12 @@ class Petition_Clerks(QMainWindow):
             replace_in_doc(doc, placeholders, p_from, p_res, d_from, d_res)
             doc.save(final_file)
             
+            # Open the file automatically for the clerk
+            try:
+                os.startfile(final_file)
+            except Exception as e:
+                print(f"Could not open file: {e}")
+
             db = DataBase()
             db.cur.execute("""
                 INSERT INTO cms.document (document_type, file_path, uploaded_by, client_id)
@@ -234,7 +248,7 @@ class Petition_Clerks(QMainWindow):
         except Exception as e:
             print(f"Failed to send notification: {e}")
 
-        QMessageBox.information(self, "نجاح", f"تم تسجيل الموكل، إنشاء الملف وإرساله بنجاح!\n\nالمسار:\n{final_file}")
+        QMessageBox.information(self, "نجاح", f"تم تسجيل الموكل، إنشاء الملف وإرساله بنجاح!\n\nسيتم فتح الملف الآن...")
         
         self.plaintiff_name.clear()
         self.plaintiff_national_id.clear()

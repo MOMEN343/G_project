@@ -1,17 +1,54 @@
 
 import psycopg2
+import json
+import os
+import subprocess
+import datetime
+
 
 class DataBase:
 
     def __init__(self): 
+        import socket
+        current_hostname = socket.gethostname()
+        target_server = "MoAlshanti"  # اسم جهازك الرئيسي
+        
+        # تحديد مسار ملف الإعدادات
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+        
+        # الإعدادات الذكية: إذا كان هذا هو جهازك الرئيسي، استخدم localhost، وإلا استخدم اسم جهازك في الشبكة
+        if current_hostname == target_server:
+            default_host = "localhost"
+            default_files = os.path.join(os.path.dirname(os.path.abspath(__file__)), "files")
+        else:
+            default_host = target_server
+            default_files = f"\\\\{target_server}\\files"
+
+        db_config = {
+            "db_host": default_host,
+            "db_port": 5432,
+            "db_name": "g_project",
+            "db_user": "postgres",
+            "db_password": "2002",
+            "files_path": default_files
+        }
+        # إذا أراد الموظف تغيير الإعدادات يدوياً عبر ملف json (اختياري)
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    db_config.update(json.load(f))
+            except:
+                pass
+
         self.conn = psycopg2.connect(
-            host="localhost",
-            port=1234,
-            database="g_project",
-            user="postgres",
-            password ="2052005"
+            host=db_config["db_host"],
+            port=db_config["db_port"],
+            database=db_config["db_name"],
+            user=db_config["db_user"],
+            password=db_config["db_password"]
         )
         self.cur = self.conn.cursor()
+        self.files_path = db_config["files_path"]
 
     def create_tables(self):
         
@@ -193,3 +230,36 @@ class DataBase:
     def close(self):
         self.cur.close()
         self.conn.close()
+
+    def backup_database(self):
+        try:
+            back_up_folder = r"C:\Users\TOP\Desktop\g_j\files\backup"
+            os.makedirs(back_up_folder, exist_ok=True)
+            today = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            backup_file = os.path.join(back_up_folder, f"g_project_{today}.sql")
+
+            # Need to get password from config or hardcode it since db_config is local to __init__
+            # Since you know the credentials:
+            db_user = "postgres"
+            db_name = "g_project"
+            os.environ["PGPASSWORD"] = "2002"
+
+            import glob
+            pg_dump_path = "pg_dump"
+            possible_paths = glob.glob(r"C:\Program Files\PostgreSQL\*\bin\pg_dump.exe")
+            if possible_paths:
+                # Use absolute path to bypass 'not recognized' issue, and grab the latest installed version
+                pg_dump_path = f'"{possible_paths[-1]}"'
+
+            command = f'{pg_dump_path} -U {db_user} -F p {db_name} -f "{backup_file}"'
+            result = subprocess.run(command, shell=True, capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print(f"Backup Done ✅ File: {backup_file}")
+                return True, backup_file
+            else:
+                print(f"Backup Failed ❌ Error: {result.stderr}")
+                return False, result.stderr
+        except Exception as e:
+            print(f"Backup Exception: {str(e)}")
+            return False, str(e)

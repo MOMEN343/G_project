@@ -1,5 +1,6 @@
 import random
 import os
+import sys
 from db import DataBase
 from PyQt5 import uic
 from PyQt5.QtWidgets import (
@@ -9,13 +10,20 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QFontDatabase
 from PyQt5.QtCore import Qt
 
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 class AdminWindow(QMainWindow):
     def __init__(self, main_shell=None):
         super().__init__()
         self.main_shell = main_shell
         self.db = DataBase()
 
-        uic.loadUi("admin_dashboard.ui", self)
+        uic.loadUi(resource_path("admin_dashboard.ui"), self)
 
         # ربط الأزرار من الواجهة
         self.addEmployeeBtn.clicked.connect(self.open_add_user_window)
@@ -23,25 +31,45 @@ class AdminWindow(QMainWindow):
         self.deleteEmployeeBtn.clicked.connect(self.delete_employee)
         self.logoutBtn.clicked.connect(self.log_out)
         
+        if hasattr(self, 'backupBtn'):
+            self.backupBtn.clicked.connect(self.run_backup)
+
+        # إضافة مستمعات لتغيير الحالة النشطة (الشحطة)
+        sidebar_btns = [self.addEmployeeBtn, self.editEmployeeBtn, self.deleteEmployeeBtn]
+        if hasattr(self, 'backupBtn'):
+            sidebar_btns.append(self.backupBtn)
+
+        for btn in sidebar_btns:
+            btn.clicked.connect(lambda checked, b=btn: self.set_active_button(b))
+            btn.setFocusPolicy(Qt.NoFocus)
+
+        self.logoutBtn.setFocusPolicy(Qt.NoFocus)
+
         # ربط خاصية "تحديد الكل" إذا كانت موجودة في الـ UI
         if hasattr(self, "check_all"):
             self.check_all.stateChanged.connect(self.select_all_employees)
-        
-        self.addEmployeeBtn.setFocusPolicy(Qt.NoFocus)
-        self.deleteEmployeeBtn.setFocusPolicy(Qt.NoFocus)
-        self.logoutBtn.setFocusPolicy(Qt.NoFocus)
 
         self.employeesTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # تصغير عمود الـ checkbox
         self.employeesTable.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
         self.employeesTable.setColumnWidth(0, 50)
-        QFontDatabase.addApplicationFont("fonts/Alyamama-Bold.ttf")       
+        QFontDatabase.addApplicationFont(resource_path("fonts/Alyamama-Bold.ttf"))       
         self.setStyleSheet("""
-    * {
-        font-family: "Alyamama";
-        color: white;
-    }
-""")
+        * {
+            font-family: "Alyamama", "Segoe UI Symbol";
+            color: #452829;
+        }
+        QLineEdit {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px;
+            background-color: white;
+        }
+        QLineEdit:focus {
+            border: 1px solid #452829;
+            background-color: #fcfcfc;
+        }
+        """)
 
         self.db.cur.execute("""
             SELECT 
@@ -243,6 +271,36 @@ class AdminWindow(QMainWindow):
         else:
             self.close()
 
+    def set_active_button(self, clicked_btn):
+        # إزالة الحالة النشطة من جميع الأزرار
+        for btn in [self.addEmployeeBtn, self.editEmployeeBtn, self.deleteEmployeeBtn, getattr(self, 'backupBtn', None)]:
+            if btn:
+                btn.setProperty("active", False)
+                btn.style().unpolish(btn)
+                btn.style().polish(btn)
+        
+        # تفعيل الحالة للزر الذي تم الضغط عليه
+        clicked_btn.setProperty("active", True)
+        clicked_btn.style().unpolish(clicked_btn)
+        clicked_btn.style().polish(clicked_btn)
+
+    def run_backup(self):
+        self.set_active_button(self.backupBtn)
+        self.backupBtn.setEnabled(False)
+        self.backupBtn.setText("جاري النسخ...")
+        
+        # force UI update before backup
+        import PyQt5.QtWidgets as QtWidgets
+        QtWidgets.QApplication.processEvents()
+
+        success, msg = self.db.backup_database()
+        if success:
+            QMessageBox.information(self, "نجاح", f"تم نسخ قاعدة البيانات بنجاح!\nالمسار:\n{msg}")
+        else:
+            QMessageBox.warning(self, "فشل النسخ", f"حدث خطأ أثناء أخذ النسخة الاحتياطية:\n{msg}")
+            
+        self.backupBtn.setText("نسخ احتياطي 💾")
+        self.backupBtn.setEnabled(True)
 
 class AddUserWindow(QMainWindow):
     def __init__(self, admin_window, employee_data=None):
@@ -251,7 +309,7 @@ class AddUserWindow(QMainWindow):
         self.employee_data = employee_data  # إذا كان موجود = وضع التعديل
         self.is_edit_mode = employee_data is not None
         
-        uic.loadUi("add_user.ui", self)  # افترض وجود الواجهة
+        uic.loadUi(resource_path("add_user.ui"), self)  # افترض وجود الواجهة
 
         # جلب البيانات من جدول role
         self.db = DataBase()

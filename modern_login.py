@@ -5,6 +5,15 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame,
                               QGraphicsBlurEffect)
 from PyQt5.QtGui import QPixmap, QCursor, QPainter, QImage, QColor, QPainterPath, QIcon
 from PyQt5.QtCore import Qt, QRect, QSize
+import sys
+import os
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 
 # ── أيقونات SVG مدمجة ───────────────────────────────────────────────
@@ -92,7 +101,7 @@ class IconLineEdit(QLineEdit):
 class ModernLoginWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.bg_image = QImage("icons/background.jpeg")
+        self.bg_image = QImage(resource_path("icons/background.jpeg"))
         self.init_ui()
 
     def paintEvent(self, event):
@@ -139,7 +148,7 @@ class ModernLoginWidget(QWidget):
 
         # شعار
         self.cardIcon = QLabel()
-        logo_pix = QPixmap("icons/scales.png")
+        logo_pix = QPixmap(resource_path("icons/scales.png"))
         if not logo_pix.isNull():
             self.cardIcon.setPixmap(
                 logo_pix.scaled(110, 110, Qt.KeepAspectRatio, Qt.SmoothTransformation))

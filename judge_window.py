@@ -1,9 +1,17 @@
 import os
+import sys
 from datetime import date
 from db import DataBase
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame
 from PyQt5.QtCore import Qt
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 class JudgeWindow(QMainWindow):
     def __init__(self, current_user_id, main_shell=None):
@@ -13,7 +21,7 @@ class JudgeWindow(QMainWindow):
         self.db = DataBase()
         
         # Load the UI file
-        uic.loadUi("judge.ui", self)
+        uic.loadUi(resource_path("judge.ui"), self)
         
         # Connect Sidebar Buttons
         if hasattr(self, 'logoutBtn'):

@@ -1,13 +1,22 @@
 import sys
+import os
 from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtGui import QFontDatabase
 from PyQt5.QtWidgets import QApplication, QMessageBox
+
+def resource_path(relative_path):
+    """ جلب المسار المطلق للموارد، يعمل في التطوير وفي PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 from admin import AdminWindow
 from petition_clerks import Petition_Clerks
 from user_window import UserWindow
-
 from judge_window import JudgeWindow
-
 from db import DataBase
 from modern_login import ModernLoginWidget
 
@@ -63,7 +72,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.login_widget.loginButton.setDefault(True)
         
         # Load fonts
-        QFontDatabase.addApplicationFont("fonts/Alyamama-Bold.ttf")
+        QFontDatabase.addApplicationFont(resource_path("fonts/Alyamama-Bold.ttf"))
         
         # Apply Stylesheets ONLY if it's the old UI
         if hasattr(self.login_widget, 'splitter'):
@@ -179,6 +188,17 @@ class MainWindow(QtWidgets.QMainWindow):
             widget = self.stack.widget(i)
             self.stack.removeWidget(widget)
             widget.deleteLater()
+
+    def closeEvent(self, event):
+        try:
+            success, msg = self.db.backup_database()
+            if success:
+                print("Automatic Backup Success upon closing.")
+            else:
+                print("Automatic Backup Failed:", msg)
+        except Exception as e:
+            print("Automatic Backup Exception:", e)
+        super().closeEvent(event)
 
 app = QApplication(sys.argv)
 window = MainWindow()
