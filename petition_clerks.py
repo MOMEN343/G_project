@@ -155,61 +155,15 @@ class Petition_Clerks(QMainWindow):
                 "{PLAINTIFF_RESIDENT}": p_res,
                 "{DEFENDANT_NAME}": self.defendant_name.text(),
                 "{DEFENDANT_FROM}": d_from,
-                "{DEFENDANT_RESIDENT}": d_res,            
+                "{DEFENDANT_RESIDENT}": d_res,  
+                          
             }
 
-            def replace_in_doc(doc, placeholders, p_from, p_res, d_from, d_res):
-                import re
-                paragraphs = list(doc.paragraphs)
-                for table in doc.tables:
-                    for row in table.rows:
-                        for cell in row.cells:
-                            paragraphs.extend(list(cell.paragraphs))
-                
-                for p in paragraphs:
-                    full_text = p.text
-                    updated = False
-                    for key, val in placeholders.items():
-                        if key in full_text:
-                            full_text = full_text.replace(key, str(val))
-                            updated = True
-                    
-                    is_plaintiff_line = re.search(r"المدع[ـ]*ية", full_text)
-                    is_defendant_line = re.search(r"المدع[ـ]*ي[ـ]*[\s]*عليه|المدع[ـ]*ى[ـ]*[\s]*عليه", full_text)
-                    
-                    if is_plaintiff_line and not is_defendant_line:
-                        if self.plaintiff_name.text() not in full_text:
-                            full_text = re.sub(r"المدع[ـ]*ية\s*/?[ـ_\s]*", f"المدعية/ {self.plaintiff_name.text()} ", full_text)
-                        if p_from not in full_text:
-                            full_text = re.sub(r"من[ـ_\s]+", f"من {p_from} ", full_text)
-                        if p_res not in full_text:
-                            full_text = re.sub(r"وسكان[ـ_\s]+", f"وسكان {p_res} ", full_text)
-                        updated = True
-                    
-                    if is_defendant_line:
-                        if self.defendant_name.text() not in full_text:
-                            full_text = re.sub(r"(المدع[ـ]*ي[ـ]*\s*عليه|المدع[ـ]*ى[ـ]*\s*عليه)\s*/?[ـ_\s]*", f"المدعى عليه/ {self.defendant_name.text()} ", full_text)
-                        if d_from not in full_text:
-                            full_text = re.sub(r"من[ـ_\s]+", f"من {d_from} ", full_text)
-                        if d_res not in full_text:
-                            full_text = re.sub(r"وسكان[ـ_\s]+", f"وسكان {d_res} ", full_text)
-                        updated = True
-
-                    if updated:
-                        if len(p.runs) > 0:
-                            p.runs[0].text = full_text
-                            for i in range(1, len(p.runs)): p.runs[i].text = ""
-                        else: p.add_run(full_text)
-
-            replace_in_doc(doc, placeholders, p_from, p_res, d_from, d_res)
+            from doc_helpers import safe_replace_in_doc
+            
+            safe_replace_in_doc(doc, placeholders)
             doc.save(final_file)
             
-            # Open the file automatically for the clerk
-            try:
-                os.startfile(final_file)
-            except Exception as e:
-                print(f"Could not open file: {e}")
-
             db = DataBase()
             db.cur.execute("""
                 INSERT INTO cms.document (document_type, file_path, uploaded_by, client_id)

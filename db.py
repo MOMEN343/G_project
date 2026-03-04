@@ -26,10 +26,10 @@ class DataBase:
 
         db_config = {
             "db_host": default_host,
-            "db_port": 5432,
+            "db_port": 1234,
             "db_name": "g_project",
             "db_user": "postgres",
-            "db_password": "2002",
+            "db_password": "2052005",
             "files_path": default_files
         }
         # إذا أراد الموظف تغيير الإعدادات يدوياً عبر ملف json (اختياري)

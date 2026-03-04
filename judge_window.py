@@ -64,39 +64,6 @@ class JudgeWindow(QMainWindow):
         self.current_verdict_case_number = None
         self.current_verdict_session_id = None
         
-        # Helper for docx replacement to keep formatting
-        def safe_replace(paragraph, placeholders):
-            for key, val in placeholders.items():
-                if key not in paragraph.text:
-                    continue
-                
-                # 1. Try simple run replacement (preserves specific styling of that run)
-                replaced_in_run = False
-                for run in paragraph.runs:
-                    if key in run.text:
-                        run.text = run.text.replace(key, str(val))
-                        replaced_in_run = True
-                
-                # 2. If placeholder is split across runs, merge into the run that starts the placeholder
-                if not replaced_in_run and key in paragraph.text:
-                    full_text = paragraph.text
-                    new_text = full_text.replace(key, str(val))
-                    
-                    # Find the run that contains the start of the placeholder '{'
-                    target_run_index = 0
-                    for i, run in enumerate(paragraph.runs):
-                        if '{' in run.text:
-                            target_run_index = i
-                            break
-                    
-                    # Set the new text to the target run (the one with the correct placeholder font)
-                    paragraph.runs[target_run_index].text = new_text
-                    
-                    # Clear all other runs in the paragraph to avoid duplication
-                    for i, run in enumerate(paragraph.runs):
-                        if i != target_run_index:
-                            run.text = ""
-        self.safe_replace = safe_replace
 
         uic.loadUi("judge.ui", self)
 
@@ -234,13 +201,14 @@ class JudgeWindow(QMainWindow):
         from PyQt5.QtCore import QPoint
         
         menu = QMenu(self)
-        menu.setFixedWidth(350)
+        menu.setFixedWidth(400)
         menu.setStyleSheet("""
             QMenu {
                 background-color: #452829;
                 border: 1px solid #b08d57;
                 border-radius: 12px;
                 padding: 10px;
+                direction: rtl;
             }
             QMenu::separator {
                 height: 1px;
@@ -473,6 +441,8 @@ class JudgeWindow(QMainWindow):
                 lbl = item.widget()
                 lbl.setText(headers[i])
                 lbl.setAlignment(Qt.AlignCenter)
+                lbl.setStyleSheet("color: #b08d57; font-size: 11px; font-weight: bold; min-width: 32px; max-width: 32px; background: transparent;")
+                lbl.setVisible(True)
 
     def _prev_month(self):
         self._cal_month = self._cal_month.addMonths(-1)
@@ -1604,13 +1574,8 @@ class JudgeWindow(QMainWindow):
                 "{VERDICT_TEXT}": verdict_body
             }
 
-            for p in doc.paragraphs:
-                self.safe_replace(p, placeholders)
-            for t in doc.tables:
-                for r in t.rows:
-                    for c in r.cells:
-                        for p in c.paragraphs:
-                            self.safe_replace(p, placeholders)
+            from doc_helpers import safe_replace_in_doc
+            safe_replace_in_doc(doc, placeholders)
 
             doc.save(final_path)
 

@@ -774,7 +774,7 @@ class UserWindow(QMainWindow):
 
             if session_date_val:
                 session_day_str = arabic_days.get(session_date_val.weekday(), "")
-                session_date_str = session_date_val.strftime("%Y-%m-%d")
+                session_date_str = session_date_val.strftime("%Y/%m/%d")
             else:
                 session_day_str = ""
                 session_date_str = ""
@@ -815,7 +815,7 @@ class UserWindow(QMainWindow):
                 "{DEFENDANT_FROM}": d_from,
                 "{DEFENDANT_RESIDENT}": d_res,
                 "{CURRENT_CASE_TYPE}": doc_type or "",
-                "{ENTRY_DATE}": upload_date.strftime("%Y-%m-%d") if upload_date else datetime.now().strftime("%Y-%m-%d"),
+                "{ENTRY_DATE}": upload_date.strftime("%Y/%m/%d") if upload_date else datetime.now().strftime("%Y/%m/%d"),
                 "{JUDGE_NAME}": judge_name or "",
                 "{CASE_NUMBER}": case_number,
                 "{SESSION_DAY}": session_day_str,
@@ -828,37 +828,8 @@ class UserWindow(QMainWindow):
                 if val and not val.startswith(" "):
                     placeholders[key] = " " + val
             
-            def replace_in_doc(doc, placeholders):
-                # Process all paragraphs, including those in tables
-                paragraphs = list(doc.paragraphs)
-                for table in doc.tables:
-                    for row in table.rows:
-                        for cell in row.cells:
-                            paragraphs.extend(list(cell.paragraphs))
-                
-                for p in paragraphs:
-                    for key, val in placeholders.items():
-                        if key in p.text:
-                            # Try to replace within runs first (to preserve formatting)
-                            replaced_in_run = False
-                            for run in p.runs:
-                                if key in run.text:
-                                    run.text = run.text.replace(key, str(val))
-                                    replaced_in_run = True
-                            
-                            # If not found in a single run, replace at paragraph level (fallback)
-                            if not replaced_in_run and key in p.text:
-                                # Save original formatting from first run if possible
-                                if p.runs:
-                                    # This approach is nuclear but effective for split placeholders
-                                    full_text = p.text.replace(key, str(val))
-                                    p.runs[0].text = full_text
-                                    for i in range(1, len(p.runs)):
-                                        p.runs[i].text = ""
-                                else:
-                                    p.add_run(p.text.replace(key, str(val)))
-            
-            replace_in_doc(doc, placeholders)
+            from doc_helpers import safe_replace_in_doc
+            safe_replace_in_doc(doc, placeholders)
             doc.save(final_file_path)
             
             # Save extracted notification document back to database so Judge can view it
@@ -1322,9 +1293,10 @@ class UserWindow(QMainWindow):
             
             placeholders = {          
                 "{CASE_NUMBER}": str(case_number_val).translate(str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")),
-                "{SESSION_DATE}": f"{session_date.year}-{session_date.month:02d}-{session_date.day:02d}",
+                "{SESSION_DATE}": f"{session_date.year}/{session_date.month:02d}/{session_date.day:02d}",
                 "{SESSION_DAY}": session_day_str,
-                "{SESSION_TIME}": f"{session_time.hour:02d}:{session_time.minute:02d}"
+                "{SESSION_TIME}": f"{session_time.hour:02d}:{session_time.minute:02d}",
+                "{ENTRY_DATE}": datetime.now().strftime("%Y/%m/%d"),
             }
 
             for (file_path,) in documents:
