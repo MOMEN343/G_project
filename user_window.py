@@ -28,8 +28,8 @@ class UserWindow(QMainWindow):
         self.db = DataBase()
 
         # Load the new UI
-        uic.loadUi(resource_path("employee.ui"), self)
-        
+        uic.loadUi("employee.ui", self)
+
         self.setStyleSheet("""
         * {
             font-family: "Alyamama", "Segoe UI Symbol";
@@ -45,18 +45,115 @@ class UserWindow(QMainWindow):
             border: 1px solid #452829;
             background-color: #fcfcfc;
         }
+        
+        /* Premium QCalendarWidget Styling */
+        QCalendarWidget QWidget {
+            background-color: white;
+        }
+        QCalendarWidget #qt_calendar_navigationbar {
+            background-color: #452829;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+        QCalendarWidget QToolButton {
+            color: white;
+            font-weight: bold;
+            font-family: 'Alyamama';
+            font-size: 15px;
+            icon-size: 20px;
+            padding: 5px;
+            background: transparent;
+            border: none;
+        }
+        QCalendarWidget QToolButton::menu-indicator {
+            image: none;
+        }
+        QCalendarWidget QToolButton:hover {
+            background-color: rgba(176, 141, 87, 0.5);
+            border-radius: 8px;
+        }
+        QCalendarWidget QToolButton#qt_calendar_prevmonth {
+            qproperty-icon: none;
+            qproperty-text: "◀";
+        }
+        QCalendarWidget QToolButton#qt_calendar_nextmonth {
+            qproperty-icon: none;
+            qproperty-text: "▶";
+        }
+        QCalendarWidget QAbstractItemView:enabled {
+            color: #452829;
+            font-size: 14px;
+            selection-background-color: #b08d57;
+            selection-color: white;
+            outline: none;
+            border: none;
+            background-color: white;
+        }
+        QCalendarWidget QAbstractItemView:disabled {
+            color: #bbb;
+        }
+        QCalendarWidget #qt_calendar_calendarview {
+            border: 1px solid #e8e0d8;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+        QCalendarWidget QSpinBox {
+            background-color: white;
+            color: #452829;
+            selection-background-color: #b08d57;
+            border: none;
+            font-size: 14px;
+            margin: 0px;
+        }
+        QCalendarWidget QSpinBox::up-button, QCalendarWidget QSpinBox::down-button {
+            width: 0px;
+        }
+        
         """)
 
         # Connect Buttons
-        self.add_case.clicked.connect(self.new_case_dialog)
+        self.add_case.clicked.connect(self.show_add_case)
         self.docments.clicked.connect(self.show_documents)
         self.logoutBtn.clicked.connect(self.log_out)
         self.master_record.clicked.connect(self.show_master_record)
         self.btn_scheduling.clicked.connect(self.show_scheduling)
         self.btn_save_session.clicked.connect(self.save_session)
-        self.case2.clicked.connect(self.show_calendar)
+        self.calendar.clicked.connect(self.show_calendar)
         self.searchMasterRecord.textChanged.connect(self.filter_master_record)
         self.searchScheduling.textChanged.connect(self.filter_scheduling)
+        
+        
+        # 2. Fix Labels and Swap with Spacers to ensure Right Side
+        for name in ['labelJudgeWrapper', 'labelDateWrapper', 'labelTimeWrapper']:
+            layout = self.findChild(QtWidgets.QHBoxLayout, name)
+            if layout:
+                # Ensure Label is on the RIGHT, Spacer on the LEFT
+                # Qt's QHBoxLayout in RTL mode puts the first item added on the right.
+                layout.setDirection(QtWidgets.QBoxLayout.LeftToRight) # Set base LTR
+                items = []
+                while layout.count():
+                    items.append(layout.takeAt(0))
+                
+                # Order: [Spacer, Label] -> In LTR this makes Label on the right.
+                label_item = None
+                spacer_item = None
+                for it in items:
+                    if it.widget() and isinstance(it.widget(), QtWidgets.QLabel):
+                        label_item = it
+                    elif it.spacerItem():
+                        spacer_item = it
+                
+                if spacer_item: layout.addItem(spacer_item)
+                if label_item: layout.addItem(label_item)
+                if label_item and label_item.widget():
+                    label_item.widget().setStyleSheet("color: #b08d57; font-size: 14px; font-weight: bold; font-family: 'Alyamama';")
+                    label_item.widget().setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        # 3. Fix main card layout direction (Items: Judge, Date, Time, SaveBtn)
+        # Should be RTL: Judge(Right) -> Date -> Time -> SaveBtn(Left)
+        if hasattr(self, 'bottomCardLayout'):
+            self.bottomCardLayout.setDirection(QtWidgets.QBoxLayout.RightToLeft)
+            self.schedulingBottomCard.setLayoutDirection(Qt.LeftToRight) # Keep the card itself LTR for proper button placement
         
         if hasattr(self, 'notification'):
             self.notification.clicked.connect(self.show_notifications)
@@ -88,34 +185,26 @@ class UserWindow(QMainWindow):
         if hasattr(self, 'files_grid'):
             self.files_grid.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
-        # 1. Clean up & Rebuild Calendar Page (The "Image 611" Ultimate Fix)
-        # We handle this in code to ensure perfect alignment regardless of UI file state
         if hasattr(self, 'page_calendar') and hasattr(self, 'verticalLayout_calendar'):
-            # Aggressively Hide everything that came from the UI file originally
             for w in self.page_calendar.findChildren(QWidget):
                 if w.objectName() in ["calendarLeftPanel", "calendarHeader", "search_calendar", "btn_calendar_add", "label_calendar_date", "footerLayout"] or \
                    isinstance(w, (QPushButton, QtWidgets.QLineEdit, QLabel)) and w.parent() == self.page_calendar:
                     w.hide()
             
-            # Reset layout to clear any spacers or odd items
             while self.verticalLayout_calendar.count():
                 child = self.verticalLayout_calendar.takeAt(0)
                 if child.widget(): child.widget().hide()
 
-            # Set background for the calendar page
             self.page_calendar.setStyleSheet("QWidget#page_calendar { background-color: transparent; }")
 
-            # Create Modern Header
             self.header_card = QWidget()
             self.header_card.setFixedHeight(85)
             h_layout = QHBoxLayout(self.header_card)
             h_layout.setContentsMargins(30, 20, 30, 10)
             
-            # 1. Main Title
             title_lbl = QLabel("🗄 جدول القضاة")
             title_lbl.setStyleSheet("color: #452829; font-size: 20pt; font-weight: bold;")
             
-            # 2. Date Navigator (Middle)
             self.date_nav_box = QWidget()
             d_layout = QHBoxLayout(self.date_nav_box)
             d_layout.setSpacing(15)
@@ -150,14 +239,12 @@ class UserWindow(QMainWindow):
                 }
             """)
 
-            # Assemble Header Layout
             h_layout.addWidget(title_lbl)
             h_layout.addStretch()
             h_layout.addWidget(self.date_nav_box)
             h_layout.addStretch()
             h_layout.addWidget(self.custom_search)
 
-            # Table Box
             self.table_box = QFrame()
             self.table_box.setStyleSheet("QFrame { background-color: #f6f4f2; border-radius: 20px; border: 1px solid #e0e0e0; }")
             shadow = QtWidgets.QGraphicsDropShadowEffect()
@@ -177,33 +264,147 @@ class UserWindow(QMainWindow):
                 """)
                 self.mainCalendarTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-            # Assemble
             self.verticalLayout_calendar.addWidget(self.header_card)
             self.verticalLayout_calendar.addWidget(self.table_box)
             self.verticalLayout_calendar.setStretch(1, 1)
             self.verticalLayout_calendar.setContentsMargins(20, 0, 20, 20)
 
-            # Connections
             self.current_cal_date = date.today()
             self.custom_btn_prev.clicked.connect(lambda: self.show_calendar(self.current_cal_date - timedelta(days=1)))
             self.custom_btn_next.clicked.connect(lambda: self.show_calendar(self.current_cal_date + timedelta(days=1)))
             self.custom_search.textChanged.connect(self.filter_calendar_table)
 
-        # Force initial state
         if hasattr(self, 'mainStack') and hasattr(self, 'page_empty'):
              self.mainStack.setCurrentWidget(self.page_empty)
         
-        # Point global label to custom one for updates
-        self.label_calendar_date = self.custom_label_date
+        if hasattr(self, 'label_calendar_date'):
+            self.label_calendar_date = self.custom_label_date
         
-        # Reset styles so no buttons are highlighted on start
+        # --- Apply Shadows for Premium Feel ---
+        if hasattr(self, 'schedulingBottomCard'):
+            shadow = QtWidgets.QGraphicsDropShadowEffect()
+            shadow.setBlurRadius(30)
+            shadow.setColor(QColor(0, 0, 0, 30))
+            shadow.setOffset(0, 8)
+            self.schedulingBottomCard.setGraphicsEffect(shadow)
+            
         self.reset_sidebar_styles()
 
+    def show_add_case(self):
+        self.reset_sidebar_styles()
+        self.add_case.setProperty("active", True)
+        self.add_case.style().unpolish(self.add_case)
+        self.add_case.style().polish(self.add_case)
+        self.mainStack.setCurrentWidget(self.page_add_case)
+
+        db = DataBase()
+        db.cur.execute("""
+            SELECT client_id, plaintiff_name, defendant_name, case_type
+            FROM cms.client
+            WHERE client_id NOT IN (SELECT client_id FROM cms.case_client)
+        """)
+        clients = db.cur.fetchall()
+        db.close()
+
+        table = self.addCaseTable
+        table.setRowCount(0)
+        table.verticalHeader().setVisible(False)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.add_case_checkboxes = []
+
+        if not clients:
+            table.setRowCount(1)
+            item = QtWidgets.QTableWidgetItem("لا توجد عملاء جدد لإضافتهم")
+            item.setTextAlignment(Qt.AlignCenter)
+            table.setItem(0, 0, item)
+            table.setSpan(0, 0, 1, 4)
+            self.btn_create_cases.setEnabled(False)
+            return
+
+        self.btn_create_cases.setEnabled(True)
+        self._add_case_clients = clients
+
+        for row, client in enumerate(clients):
+            client_id, p_name, d_name, c_type = client
+            table.insertRow(row)
+            chk = QCheckBox()
+            cell_widget = QWidget()
+            layout = QHBoxLayout(cell_widget)
+            layout.addWidget(chk)
+            layout.setAlignment(Qt.AlignCenter)
+            layout.setContentsMargins(0, 0, 0, 0)
+            table.setCellWidget(row, 0, cell_widget)
+            self.add_case_checkboxes.append(chk)
+            for col, val in enumerate([p_name, d_name, c_type], start=1):
+                item = QtWidgets.QTableWidgetItem(str(val))
+                item.setTextAlignment(Qt.AlignCenter)
+                table.setItem(row, col, item)
+            table.setRowHeight(row, 55)
+
+        try:
+            self.btn_create_cases.clicked.disconnect()
+        except:
+            pass
+        self.btn_create_cases.clicked.connect(self.create_cases_from_page)
+
+    def create_cases_from_page(self):
+        selected_rows = [i for i, cb in enumerate(self.add_case_checkboxes) if cb.isChecked()]
+        if not selected_rows:
+            QMessageBox.warning(self, "تنبيه", "اختر قضية واحدة على الأقل")
+            return
+
+        db = DataBase()
+        seen_clients = set()
+        for idx in selected_rows:
+            client_id, p_name, d_name, c_type = self._add_case_clients[idx]
+            if client_id in seen_clients:
+                # duplicate selection somehow, skip
+                continue
+            seen_clients.add(client_id)
+            # make sure we received defendant info
+            if not d_name or d_name.strip() == "":
+                QMessageBox.warning(self, "تنبيه", f"المدعى عليه للقضية {p_name} غير محدد في سجل الموكل؛ سيظهر كغير محدد في التقويم.")
+            db.cur.execute("SELECT count(*) FROM cms.court_case")
+            case_count = db.cur.fetchone()[0]
+            case_number = f"{datetime.now().strftime('%Y')}/{case_count + 1}"
+            db.cur.execute("""
+                INSERT INTO cms.court_case (case_type, case_number, status, filing_date, year, description, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING case_id
+            """, (c_type, case_number, "مفتوحة", datetime.now().date(), datetime.now().year, "-", self.current_user_id))
+            new_case_id = db.cur.fetchone()[0]
+
+            # attach the client (which already contains both plaintiff/defendant names)
+            try:
+                db.cur.execute(
+                    "INSERT INTO cms.case_client (case_id, client_id, role_in_case) VALUES (%s, %s, %s)",
+                    (new_case_id, client_id, "Plaintiff")
+                )
+            except Exception as e:
+                # ignore duplicate or other integrity errors gracefully
+                if hasattr(e, 'pgcode') and e.pgcode == '23505':
+                    print(f"warning: client {client_id} already linked to case {new_case_id}")
+                else:
+                    raise
+
+            db.cur.execute("UPDATE cms.document SET case_id = %s WHERE client_id = %s AND case_id IS NULL",
+                           (new_case_id, client_id))
+
+            # Notify Judges
+            db.cur.execute("SELECT user_id FROM cms.users WHERE role_id = 4")
+            judges_to_notify = db.cur.fetchall()
+            for judge_entry in judges_to_notify:
+                case_date = datetime.now().strftime("%Y-%m-%d")
+                notif_msg = f"تم إنشاء قضية جديدة: {c_type} برقم {case_number} بتاريخ {case_date}"
+                db.cur.execute("INSERT INTO cms.notification (user_id, message) VALUES (%s, %s)", (judge_entry[0], notif_msg))
+
+        db.conn.commit()
+        db.close()
+        QMessageBox.information(self, "نجاح", f"تم إنشاء {len(selected_rows)} قضية بنجاح ✅")
+        self.show_add_case()
+
+
     def get_hijri_date_string(self, date):
-        """
-        Converts a Gregorian date to a Hijri date string using a robust iterative algorithm.
-        Matches the Kuwaiti/Tabular Islamic calendar.
-        """
         try:
             jd = date.toordinal() + 1721425 + 1
             days_since_hijra = jd - 1948440
@@ -268,9 +469,9 @@ class UserWindow(QMainWindow):
         if notifications:
             ids = tuple([n[0] for n in notifications])
             if len(ids) == 1:
-                db.cur.execute("UPDATE cms.notification SET is_read = TRUE WHERE notification_id = %s", (ids[0],))
+                db.cur.execute("DELETE FROM cms.notification WHERE notification_id = %s", (ids[0],))
             else:
-                db.cur.execute("UPDATE cms.notification SET is_read = TRUE WHERE notification_id IN %s", (ids,))
+                db.cur.execute("DELETE FROM cms.notification WHERE notification_id IN %s", (ids,))
             db.conn.commit()
         db.close()
         
@@ -313,7 +514,11 @@ class UserWindow(QMainWindow):
                 time_label.setStyleSheet("color: #f3db93; font-size: 12px;")
                 time_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
+                sep = QLabel("|")
+                sep.setStyleSheet("color: rgba(255,255,255,0.2); font-weight: bold; font-size: 14px;")
+
                 item_layout.addWidget(msg_label, 1)
+                item_layout.addWidget(sep, 0)
                 item_layout.addWidget(time_label, 0)
                 
                 action = QWidgetAction(menu)
@@ -331,7 +536,7 @@ class UserWindow(QMainWindow):
         self.show_documents(highlight_id=document_id)
 
     def reset_sidebar_styles(self):
-        buttons = [self.add_case, self.docments, self.master_record, self.btn_scheduling, self.case2]
+        buttons = [self.add_case, self.docments, self.master_record, self.btn_scheduling, self.calendar]
         for btn in buttons:
             btn.setFocusPolicy(Qt.NoFocus)
             btn.setProperty("active", False)
@@ -348,7 +553,7 @@ class UserWindow(QMainWindow):
 
         try:
             db_clear = DataBase()
-            db_clear.cur.execute("UPDATE cms.notification SET is_read = TRUE WHERE user_id = %s", (self.current_user_id,))
+            db_clear.cur.execute("DELETE FROM cms.notification WHERE user_id = %s", (self.current_user_id,))
             db_clear.conn.commit()
             db_clear.close()
             self.update_badge()
@@ -525,21 +730,32 @@ class UserWindow(QMainWindow):
                     COALESCE(c1.plaintiff_address, c2.plaintiff_address) as plaintiff_address,
                     COALESCE(c1.defendant_name, c2.defendant_name) as defendant_name,
                     COALESCE(c1.defendant_address, c2.defendant_address) as defendant_address,
-                    d.document_type
+                    d.document_type,
+                    d.upload_date,
+                    j.full_name as judge_name,
+                    ct.case_number,
+                    s.session_date,
+                    s.session_time
                 FROM cms.document d
+                LEFT JOIN cms.users u ON d.uploaded_by = u.user_id
                 LEFT JOIN cms.client c1 ON d.client_id = c1.client_id
-                LEFT JOIN cms.case_client cc ON d.case_id = cc.case_id
+                LEFT JOIN cms.case_client cc ON (cc.case_id = d.case_id OR (d.case_id IS NULL AND cc.client_id = d.client_id))
                 LEFT JOIN cms.client c2 ON cc.client_id = c2.client_id
+                LEFT JOIN cms.court_case ct ON cc.case_id = ct.case_id
+                LEFT JOIN cms.session s ON cc.case_id = s.case_id
+                LEFT JOIN cms.users j ON s.judge_id = j.user_id
                 WHERE d.document_id = %s
+                ORDER BY s.session_id DESC NULLS LAST, ct.filing_date DESC LIMIT 1
             """, (doc_id,))
             result = db.cur.fetchone()
             db.close()
-            
+
             if not result:
                 QMessageBox.warning(self, "خطأ", "لم يتم العثور على بيانات الموكل للمستند المحدد")
                 return
             
-            plaintiff_name, plaintiff_address, defendant_name, defendant_address, doc_type = result
+            plaintiff_name, plaintiff_address, defendant_name, defendant_address, doc_type, upload_date, judge_name, case_number, session_date_val, session_time_val = result
+
             if not plaintiff_name:
                 QMessageBox.warning(self, "تنبيه", "بيانات الموكل (المدعي) ناقصة أو غير مرتبطة بشكل صحيح بهذا المستند.")
                 return
@@ -548,8 +764,30 @@ class UserWindow(QMainWindow):
             defendant_name = defendant_name if defendant_name else ""
             defendant_address = defendant_address if defendant_address else ""
             doc_type = doc_type if doc_type else "-"
+            case_number = case_number if case_number else ""
 
-            template_path = os.path.join(self.db.files_path, "إعلان خصوم.docx")
+            # تحويل تاريخ ووقت الجلسة
+            arabic_days = {
+                0: "الاثنين", 1: "الثلاثاء", 2: "الأربعاء",
+                3: "الخميس", 4: "الجمعة", 5: "السبت", 6: "الأحد"
+            }
+
+            if session_date_val:
+                session_day_str = arabic_days.get(session_date_val.weekday(), "")
+                session_date_str = session_date_val.strftime("%Y-%m-%d")
+            else:
+                session_day_str = ""
+                session_date_str = ""
+
+            if session_time_val:
+                if hasattr(session_time_val, 'strftime'):
+                    session_time_str = session_time_val.strftime("%H:%M")
+                else:
+                    session_time_str = str(session_time_val)[:5]
+            else:
+                session_time_str = ""
+
+            template_path = os.path.join("Template files", "إعلان خصوم.docx")
             if not os.path.exists(template_path):
                 QMessageBox.warning(self, "خطأ", f"قالب إعلان الخصوم غير موجود:\n{template_path}")
                 return
@@ -570,13 +808,19 @@ class UserWindow(QMainWindow):
             d_res = d_addr.split('-')[1].strip() if '-' in d_addr else "-"
 
             placeholders = {
-                "{PLAINTIFF_NAME}": plaintiff_name if plaintiff_name else "",
+                "{PLAINTIFF_NAME}": plaintiff_name or "",
                 "{PLAINTIFF_FROM}": p_from,
                 "{PLAINTIFF_RESIDENT}": p_res,
-                "{DEFENDANT_NAME}": defendant_name if defendant_name else "",
+                "{DEFENDANT_NAME}": defendant_name or "",
                 "{DEFENDANT_FROM}": d_from,
-                "{DEFENDANT_RESIDENT}": d_res,            
-                "{CURRENT_CASE_TYPE}": doc_type if doc_type else "",
+                "{DEFENDANT_RESIDENT}": d_res,
+                "{CURRENT_CASE_TYPE}": doc_type or "",
+                "{ENTRY_DATE}": upload_date.strftime("%Y-%m-%d") if upload_date else datetime.now().strftime("%Y-%m-%d"),
+                "{JUDGE_NAME}": judge_name or "",
+                "{CASE_NUMBER}": case_number,
+                "{SESSION_DAY}": session_day_str,
+                "{SESSION_DATE}": session_date_str,
+                "{SESSION_TIME}": session_time_str,
             }
 
             for key in placeholders:
@@ -585,6 +829,7 @@ class UserWindow(QMainWindow):
                     placeholders[key] = " " + val
             
             def replace_in_doc(doc, placeholders):
+                # Process all paragraphs, including those in tables
                 paragraphs = list(doc.paragraphs)
                 for table in doc.tables:
                     for row in table.rows:
@@ -594,29 +839,58 @@ class UserWindow(QMainWindow):
                 for p in paragraphs:
                     for key, val in placeholders.items():
                         if key in p.text:
-                            key_found_in_run = False
+                            # Try to replace within runs first (to preserve formatting)
+                            replaced_in_run = False
                             for run in p.runs:
                                 if key in run.text:
                                     run.text = run.text.replace(key, str(val))
-                                    key_found_in_run = True
+                                    replaced_in_run = True
                             
-                            if not key_found_in_run and key in p.text:
-                                style_run = p.runs[0] if p.runs else None
-                                bold, italic, f_name, f_size = None, None, None, None
-                                if style_run:
-                                    bold, italic = style_run.bold, style_run.italic
-                                    f_name, f_size = style_run.font.name, style_run.font.size
-                                new_text = p.text.replace(key, str(val))
-                                for run in p.runs: run.text = ""
-                                new_run = p.add_run(new_text)
-                                if style_run:
-                                    new_run.bold = bold
-                                    new_run.italic = italic
-                                    if f_name: new_run.font.name = f_name
-                                    if f_size: new_run.font.size = f_size
+                            # If not found in a single run, replace at paragraph level (fallback)
+                            if not replaced_in_run and key in p.text:
+                                # Save original formatting from first run if possible
+                                if p.runs:
+                                    # This approach is nuclear but effective for split placeholders
+                                    full_text = p.text.replace(key, str(val))
+                                    p.runs[0].text = full_text
+                                    for i in range(1, len(p.runs)):
+                                        p.runs[i].text = ""
+                                else:
+                                    p.add_run(p.text.replace(key, str(val)))
             
             replace_in_doc(doc, placeholders)
             doc.save(final_file_path)
+            
+            # Save extracted notification document back to database so Judge can view it
+            if result:
+                db_save = DataBase()
+                db_save.cur.execute("SELECT case_id, client_id FROM cms.document WHERE document_id = %s", (doc_id,))
+                doc_meta = db_save.cur.fetchone()
+                if doc_meta:
+                    orig_case_id, orig_client_id = doc_meta
+                    
+                    # Check if notification already exists for this case
+                    db_save.cur.execute(
+                        "SELECT document_id FROM cms.document WHERE case_id = %s AND document_type = %s",
+                        (orig_case_id, "إعلان خصوم")
+                    )
+                    existing = db_save.cur.fetchone()
+                    
+                    if existing:
+                        # Update existing one
+                        db_save.cur.execute(
+                            "UPDATE cms.document SET file_path = %s, upload_date = CURRENT_TIMESTAMP WHERE document_id = %s",
+                            (final_file_path, existing[0])
+                        )
+                    else:
+                        # Insert new one
+                        db_save.cur.execute(
+                            "INSERT INTO cms.document (document_type, file_path, uploaded_by, case_id, client_id) VALUES (%s, %s, %s, %s, %s)",
+                            ("إعلان خصوم", final_file_path, self.current_user_id, orig_case_id, orig_client_id)
+                        )
+                    db_save.conn.commit()
+                db_save.close()
+
             QMessageBox.information(self, "نجاح", f"تم استخراج وتعديل إعلان الخصوم بنجاح!\n\nالملف: {final_filename}")
             
             try:
@@ -660,13 +934,12 @@ class UserWindow(QMainWindow):
     def show_calendar(self, selected_qdate=None):
         db = DataBase()
         self.reset_sidebar_styles()
-        self.case2.setProperty("active", True)
-        self.case2.style().unpolish(self.case2)
-        self.case2.style().polish(self.case2)
+        self.calendar.setProperty("active", True)
+        self.calendar.style().unpolish(self.calendar)
+        self.calendar.style().polish(self.calendar)
         
         self.mainStack.setCurrentWidget(self.page_calendar)
         
-        # Determine the date to show
         if selected_qdate:
              if hasattr(selected_qdate, 'toPyDate'):
                  selected_date = selected_qdate.toPyDate()
@@ -677,10 +950,8 @@ class UserWindow(QMainWindow):
         else:
              selected_date = date.today()
 
-        # Update global state to keep buttons in sync
         self.current_cal_date = selected_date
 
-        # Update Date Display
         hijri_str = self.get_hijri_date_string(selected_date)
         greg_str = selected_date.strftime("%d %B %Y")
         combined_date = f"{hijri_str}  |  {greg_str}"
@@ -689,7 +960,6 @@ class UserWindow(QMainWindow):
              self.label_calendar_date.setText(combined_date)
              self.label_calendar_date.setStyleSheet("color: #452829; font-size: 18px; font-family: 'Alyamama';")
         
-        # Fetch Judges
         db.cur.execute("""
             SELECT user_id, full_name FROM cms.users WHERE role_id = 4 ORDER BY user_id
         """)
@@ -702,12 +972,10 @@ class UserWindow(QMainWindow):
         table.setColumnCount(len(judge_names))
         table.setHorizontalHeaderLabels(judge_names)
         
-        # Hours from 08:00 to 16:00
         hours_list = [f"{h:02d}:00" for h in range(8, 17)]
         table.setRowCount(len(hours_list))
         table.verticalHeader().setVisible(False)
         
-        # Style Header
         table.horizontalHeader().setStyleSheet("""
             QHeaderView::section { 
                 background-color: #fcfcfc; 
@@ -722,7 +990,6 @@ class UserWindow(QMainWindow):
         table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         table.clearContents()
         
-        # Helper to add a high-end styled block
         def add_session_block(row, col, text, color_type="maroon"):
             colors = {
                 "maroon": "#452829",
@@ -756,7 +1023,6 @@ class UserWindow(QMainWindow):
             container_layout.addWidget(card)
             table.setCellWidget(row, col, container)
 
-        # Fill the Time Column
         for i, h in enumerate(hours_list):
             item = QtWidgets.QTableWidgetItem(h)
             item.setTextAlignment(Qt.AlignCenter)
@@ -766,13 +1032,9 @@ class UserWindow(QMainWindow):
             item.setFont(font)
             table.setItem(i, 0, item)
 
-        # --- REAL DATABASE SESSIONS ---
         today_str = selected_date.strftime("%Y-%m-%d")
-        
-        # Build mapping for quick lookup
         judge_id_to_col = {jid[0]: idx + 1 for idx, jid in enumerate(j_id)}
         
-        # Fetch all sessions for this day in ONE query
         db.cur.execute("""
             SELECT s.session_time, s.case_id, s.judge_id, c.case_number, c.case_type
             FROM cms.session s
@@ -787,7 +1049,6 @@ class UserWindow(QMainWindow):
             
             col_idx = judge_id_to_col[judge_id_val]
             
-            # Format time "HH:00"
             if hasattr(s_time_val, 'strftime'):
                 t_str = s_time_val.strftime("%H:00")
             elif hasattr(s_time_val, 'hour'):
@@ -805,7 +1066,6 @@ class UserWindow(QMainWindow):
         db.close()
 
     def filter_calendar_table(self, text):
-        """Filters the sessions inside the calendar table cells based on search text."""
         table = self.mainCalendarTable
         search_term = text.lower()
         
@@ -861,7 +1121,8 @@ class UserWindow(QMainWindow):
             FROM cms.case_client cc
             JOIN cms.client c ON cc.client_id = c.client_id
             JOIN cms.court_case ct ON cc.case_id = ct.case_id
-            ORDER BY ct.filing_date DESC
+            -- order ascending so case numbers start from 1 and increase downwards
+            ORDER BY ct.filing_date ASC, ct.case_number ASC
         """)
         records = db.cur.fetchall()
         db.close()
@@ -878,9 +1139,8 @@ class UserWindow(QMainWindow):
             for col_idx, value in enumerate(row_data):
                 item = QtWidgets.QTableWidgetItem(str(value))
                 item.setTextAlignment(Qt.AlignCenter)
-                table.setItem(row_idx, col_idx, item)
-                
-                if col_idx == 5: # Status column
+                # color status column (index 5) appropriately
+                if col_idx == 5:
                     if str(value) == "جديد":
                         item.setForeground(QColor("#2ECC71"))
                     elif str(value) == "مغلق":
@@ -888,8 +1148,9 @@ class UserWindow(QMainWindow):
                     font = item.font()
                     font.setBold(True)
                     item.setFont(font)
-                
                 table.setItem(row_idx, col_idx, item)
+        # enforce ascending order by case number column so cases start at 1 and increase downwards
+        table.sortItems(0, Qt.AscendingOrder)
 
         self.searchMasterRecord.clear()
         self.mainStack.setCurrentWidget(self.page_master_record)
@@ -903,7 +1164,7 @@ class UserWindow(QMainWindow):
         
         db = DataBase()
         db.cur.execute("""
-            SELECT cc.case_id, c.plaintiff_name, c.defendant_name, ct.case_type
+            SELECT cc.case_id, ct.case_number, c.plaintiff_name, c.defendant_name, ct.case_type
             FROM cms.case_client cc
             JOIN cms.client c ON cc.client_id = c.client_id
             JOIN cms.court_case ct ON cc.case_id = ct.case_id
@@ -923,17 +1184,27 @@ class UserWindow(QMainWindow):
         table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         
         self.scheduling_checkboxes = [] 
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        table.setColumnWidth(0, 120) # Significantly increased width for "اختيار الجلسة"
+        table.verticalHeader().setDefaultSectionSize(55)
+        
         for row, data in enumerate(records):
+            # data = (case_id, case_number, plaintiff, defendant, case_type)
+            table.setRowHeight(row, 55)
             chk = QCheckBox()
+            chk.setFixedSize(20, 20)
+            
             cell_widget = QWidget()
             layout = QHBoxLayout(cell_widget)
             layout.addWidget(chk)
             layout.setAlignment(Qt.AlignCenter)
-            layout.setContentsMargins(0,0,0,0)
+            layout.setContentsMargins(0, 0, 0, 0)
             table.setCellWidget(row, 0, cell_widget)
+            # store case_id separately, but don't show it to user
             self.scheduling_checkboxes.append((chk, data[0]))
             
-            for col, val in enumerate(data, start=1):
+            # display case number, plaintiff, defendant, type
+            for col, val in enumerate(data[1:], start=1):
                 item = QtWidgets.QTableWidgetItem(str(val))
                 item.setTextAlignment(Qt.AlignCenter)
                 table.setItem(row, col, item)
@@ -950,6 +1221,23 @@ class UserWindow(QMainWindow):
         if hasattr(self, 'sessionTimeInput'):
             self.sessionTimeInput.setMinimumTime(QTime(8, 0))
             self.sessionTimeInput.setMaximumTime(QTime(14, 59))
+            self.sessionTimeInput.setTime(QTime(8, 0))
+            # Force focus on Hour section so arrows work without manual selection
+            self.sessionTimeInput.setFocus()
+            self.sessionTimeInput.setCurrentSection(QtWidgets.QDateTimeEdit.HourSection)
+
+        if hasattr(self, 'sessionDateInput'):
+            current = date.today()
+            self.sessionDateInput.setMinimumDate(current) # Prevent past dates
+            
+            # If today is weekend, move to next Sunday
+            # weekday(): 0=Mon, 4=Fri, 5=Sat, 6=Sun
+            if current.weekday() == 4: # Friday
+                self.sessionDateInput.setDate(current + timedelta(days=2))
+            elif current.weekday() == 5: # Saturday
+                self.sessionDateInput.setDate(current + timedelta(days=1))
+            else:
+                self.sessionDateInput.setDate(current)
 
     def save_session(self):
         selected_case_id = None
@@ -978,6 +1266,16 @@ class UserWindow(QMainWindow):
         session_date = date(q_date.year(), q_date.month(), q_date.day())
         session_time = time(val_time.hour(), val_time.minute())
         
+        # Weekend Check (Friday=4, Saturday=5)
+        if session_date.weekday() in [4, 5]:
+             QMessageBox.warning(self, "تنبيه", "لا يمكن جدولة جلسات في أيام الإجازة (الجمعة والسبت).")
+             return
+
+        # Past Date Check (Just in case)
+        if session_date < date.today():
+             QMessageBox.warning(self, "تنبيه", "لا يمكن جدولة جلسات في تاريخ سابق.")
+             return
+        
         QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         db = DataBase()
         try:
@@ -995,45 +1293,75 @@ class UserWindow(QMainWindow):
                 VALUES (%s, %s, %s, %s, %s)
             """, (session_date, session_time, 'Scheduled', selected_case_id, judge_id))
             db.conn.commit()
-            db.close() # Close early
+            db.close()
 
             db_case = DataBase()
             db_case.cur.execute("SELECT case_number FROM cms.court_case WHERE case_id = %s", (selected_case_id,))
             case_number_val = db_case.cur.fetchone()[0]
 
             db_case.cur.execute("""
-                SELECT file_path FROM cms.document
-                WHERE case_id = %s ORDER BY upload_date DESC LIMIT 1
+                SELECT d.file_path 
+                FROM cms.document d
+                INNER JOIN cms.case_client cc ON d.client_id = cc.client_id
+                WHERE cc.case_id = %s
             """, (selected_case_id,))
-            res = db_case.cur.fetchone()
+            documents = db_case.cur.fetchall()
             db_case.close()
             
-            if res and os.path.exists(res[0]):
+            if not documents:
+                print(f"Warning: No documents found for case_id {selected_case_id}")
+                # Don't return, maybe the user wants to know session was saved anyway
+            
+            arabic_days = {
+                0: "الاثنين", 1: "الثلاثاء", 2: "الأربعاء",
+                3: "الخميس", 4: "الجمعة", 5: "السبت", 6: "الأحد"
+            }
+            session_day_str = arabic_days.get(session_date.weekday(), "")
+            date_str = session_date.strftime("%Y-%m-%d")
+            time_str = session_time.strftime("%H:%M")
+            
+            placeholders = {          
+                "{CASE_NUMBER}": str(case_number_val).translate(str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")),
+                "{SESSION_DATE}": f"{session_date.year}-{session_date.month:02d}-{session_date.day:02d}",
+                "{SESSION_DAY}": session_day_str,
+                "{SESSION_TIME}": f"{session_time.hour:02d}:{session_time.minute:02d}"
+            }
+
+            for (file_path,) in documents:
+                if not os.path.exists(file_path):
+                    continue
                 try:
-                    doc = Document(res[0])
-                    # Formatted strings for the document placeholders
-                    date_str = session_date.strftime("%Y-%m-%d")
-                    time_str = session_time.strftime("%H:%M")
-                    
-                    placeholders = {          
-                        "{CASE_NUMBER}": str(case_number_val),
-                        "{SESSION_DATE}": date_str,
-                        "{SESSION_TIME}": time_str
-                    }
-                    for p in doc.paragraphs:
-                        for run in p.runs:
-                            for key, val in placeholders.items():
-                                if key in run.text: run.text = run.text.replace(key, str(val))
+                    doc = Document(file_path)
+                    # Use THE MOST AGGRESSIVE replacement logic possible
+                    paragraphs = list(doc.paragraphs)
                     for table in doc.tables:
                         for row in table.rows:
                             for cell in row.cells:
-                                for p in cell.paragraphs:
-                                    for run in p.runs:
-                                        for key, val in placeholders.items():
-                                            if key in run.text: run.text = run.text.replace(key, str(val))
-                    doc.save(res[0])
+                                paragraphs.extend(list(cell.paragraphs))
+                    
+                    for p in paragraphs:
+                        # First check if any placeholder is in the combined text of the paragraph
+                        p_text = p.text
+                        needs_save = False
+                        for key, val in placeholders.items():
+                            if key in p_text:
+                                p_text = p_text.replace(key, str(val))
+                                needs_save = True
+                        
+                        if needs_save:
+                            # NUCLEAR OPTION: Clear and rewrite the paragraph to force replacement
+                            # but try to keep it simple. If we have runs, we modify the runs.
+                            if p.runs:
+                                p.runs[0].text = p_text
+                                for i in range(1, len(p.runs)):
+                                    p.runs[i].text = ""
+                            else:
+                                p.text = p_text
+                    
+                    doc.save(file_path)
+                    print(f"Successfully updated document: {file_path}")
                 except Exception as doc_error:
-                    print(f"Error updating Word document: {doc_error}")
+                    print(f"Error updating document {file_path}: {doc_error}")
 
             QtWidgets.QApplication.restoreOverrideCursor()
             QMessageBox.information(self, "نجاح", "تم حفظ الجلسة وتحديث ملف الدعوى بنجاح ✅")
@@ -1113,7 +1441,14 @@ class UserWindow(QMainWindow):
                 new_case_id = db.cur.fetchone()[0]
 
                 db.cur.execute("INSERT INTO cms.case_client (case_id, client_id, role_in_case) VALUES (%s, %s, %s)", (new_case_id, client_id, "Plaintiff"))
-                db.cur.execute("UPDATE cms.document SET case_id = %s WHERE uploaded_by = %s AND case_id IS NULL AND document_type = %s", (new_case_id, self.current_user_id, c_type))
+                db.cur.execute("UPDATE cms.document SET case_id = %s WHERE client_id = %s AND case_id IS NULL", (new_case_id, client_id))
+
+                # Notify Judges
+                db.cur.execute("SELECT user_id FROM cms.users WHERE role_id = 4")
+                judges_to_notify = db.cur.fetchall()
+                for judge_entry in judges_to_notify:
+                    notif_msg = f"تم إنشاء قضية جديدة: {c_type} برقم {case_number}"
+                    db.cur.execute("INSERT INTO cms.notification (user_id, message) VALUES (%s, %s)", (judge_entry[0], notif_msg))
 
             db.conn.commit()
             db.close()

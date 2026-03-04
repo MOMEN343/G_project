@@ -122,7 +122,7 @@ class Petition_Clerks(QMainWindow):
              return
 
         try:
-            template_path = os.path.join(self.db.files_path, self.current_template)
+            template_path = os.path.join("Template files", self.current_template)
             if not os.path.exists(template_path):
                 QMessageBox.warning(self, "Error", f"Template file not found: {template_path}")
                 return

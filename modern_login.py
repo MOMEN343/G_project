@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame,
                               QLabel, QLineEdit, QPushButton,
                               QGraphicsDropShadowEffect, QGraphicsOpacityEffect,
                               QGraphicsBlurEffect)
-from PyQt5.QtGui import QPixmap, QCursor, QPainter, QImage, QColor, QPainterPath, QIcon
+from PyQt5.QtGui import QPixmap, QCursor, QPainter, QImage, QColor, QPainterPath, QIcon, QFontDatabase
 from PyQt5.QtCore import Qt, QRect, QSize
 import sys
 import os
@@ -101,7 +101,14 @@ class IconLineEdit(QLineEdit):
 class ModernLoginWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.bg_image = QImage(resource_path("icons/background.jpeg"))
+        self.bg_image = QImage("icons/background.jpeg")
+        # تحميل خط Al-Rashed Sayidty لعنوان تسجيل الدخول
+        font_id_rashed = QFontDatabase.addApplicationFont("fonts/Al-Rashed-Sayidty.ttf")
+        self.rashed_font = QFontDatabase.applicationFontFamilies(font_id_rashed)[0] if font_id_rashed != -1 else 'Al-Rashed Sayidty'
+
+        # تحميل خط Isra Thin لعنوان المحكمة الشرعية
+        font_id_isra = QFontDatabase.addApplicationFont("fonts/isra-thin-regular.ttf")
+        self.isra_font = QFontDatabase.applicationFontFamilies(font_id_isra)[0] if font_id_isra != -1 else 'Isra Thin'
         self.init_ui()
 
     def paintEvent(self, event):
@@ -158,20 +165,20 @@ class ModernLoginWidget(QWidget):
 
         self.loginLabel = QLabel(" تسـجـيـل الـدخـول")
         self.loginLabel.setLayoutDirection(Qt.RightToLeft)
-        self.loginLabel.setStyleSheet("""
-            font-size: 34px; font-weight: bold;
+        self.loginLabel.setStyleSheet(f"""
+            font-size: 34px;
             color: #ffffff;
-            font-family: 'Alyamama', 'Cairo', Arial;
+            font-family: '{self.rashed_font}', 'Alyamama', 'Cairo', Arial;
         """)
         self.loginLabel.setAlignment(Qt.AlignCenter)
         self.cardLayout.addWidget(self.loginLabel)
-        self.cardLayout.addSpacing(5)
+        self.cardLayout.addSpacing(-10)
 
         self.courtTitle = QLabel("المحكمة الشرعية")
         self.courtTitle.setLayoutDirection(Qt.RightToLeft)
-        self.courtTitle.setStyleSheet("""
-            font-size: 16px; color: rgba(255,255,255,0.80);
-            font-family: 'Alyamama', 'Cairo', Arial;
+        self.courtTitle.setStyleSheet(f"""
+            font-size: 30px; color: rgba(255,255,255,0.80);
+            font-family: '{self.isra_font}', 'Alyamama', 'Cairo', Arial;
         """)
         self.courtTitle.setAlignment(Qt.AlignCenter)
         self.cardLayout.addWidget(self.courtTitle)
