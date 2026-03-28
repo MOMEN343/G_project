@@ -1,5 +1,6 @@
 import sys
 import os
+import bcrypt
 from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtGui import QFontDatabase
 from PyQt5.QtWidgets import QApplication, QMessageBox
@@ -36,22 +37,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Login Screen setup (Modern Version)
         self.login_widget = ModernLoginWidget()
-        # Old UI loading (fallback)
-        # self.login_widget = QtWidgets.QWidget()
-        # uic.loadUi("login.ui", self.login_widget)
         self.stack.addWidget(self.login_widget)
 
         self.db = DataBase()   
         self.db.create_tables()
-
-        if hasattr(self.login_widget, 'splitter'):
-            # إخفاء المقبض (Handle) للـ Splitter
-            self.login_widget.splitter.setHandleWidth(0)            
-            # منع تغيير الحجم بواسطة المستخدم
-            self.login_widget.splitter.setChildrenCollapsible(False)           
-            # تعطيل خاصية السحب
-            for i in range(self.login_widget.splitter.count()):
-                self.login_widget.splitter.handle(i).setEnabled(False)
 
         self.login_widget.installEventFilter(self)
         self.login_widget.cardLayout.setSpacing(10)
@@ -74,60 +63,22 @@ class MainWindow(QtWidgets.QMainWindow):
         # Load fonts
         QFontDatabase.addApplicationFont(resource_path("fonts/Alyamama-Bold.ttf"))
         
-        # Apply Stylesheets ONLY if it's the old UI
-        if hasattr(self.login_widget, 'splitter'):
-            self.login_widget.courtTitle.setStyleSheet("""
-                * {
-                    font-family: "Alyamama";
-                    color: white;
-                }
-            """)
-            self.login_widget.loginLabel.setStyleSheet("""
-                * {
-                    font-family: "Alyamama";
-                    background-color: white;
-                    color:#452829;                        
-                }
-            """)
-            self.login_widget.loginButton.setStyleSheet("""
-                * {
-                    font-family: "Alyamama";            
-                    font-size: 20px         
-                }
-            """)
 
         self.showMaximized()
-        QtCore.QTimer.singleShot(100, self.login_widget.username.clearFocus)
-
-        # Set splitter sizes after showMaximized to ensure correct calculation
-        if hasattr(self.login_widget, 'splitter'):
-            # Get the available width after maximization
-            screen_width = self.width()
-            half_width = screen_width // 2
-            self.login_widget.splitter.setSizes([half_width, half_width])
-
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.MouseButtonPress:
-            # Check if using the modern login widget
-            if hasattr(self.login_widget, 'card'):
-                click_pos = event.pos()
-                user_rect = self.login_widget.username.rect()
-                user_pos = self.login_widget.username.mapTo(self.login_widget, QtCore.QPoint(0,0))
-                pass_rect = self.login_widget.password.rect()
-                pass_pos = self.login_widget.password.mapTo(self.login_widget, QtCore.QPoint(0,0))
+            click_pos = event.pos()
+            user_rect = self.login_widget.username.rect()
+            user_pos = self.login_widget.username.mapTo(self.login_widget, QtCore.QPoint(0,0))
+            pass_rect = self.login_widget.password.rect()
+            pass_pos = self.login_widget.password.mapTo(self.login_widget, QtCore.QPoint(0,0))
 
-                on_user = user_rect.translated(user_pos).contains(click_pos)
-                on_pass = pass_rect.translated(pass_pos).contains(click_pos)
+            on_user = user_rect.translated(user_pos).contains(click_pos)
+            on_pass = pass_rect.translated(pass_pos).contains(click_pos)
 
-                if not (on_user or on_pass):
-                    self.login_widget.username.clearFocus()
-                    self.login_widget.password.clearFocus()
-            else:
-                # Old logic
-                if not (self.login_widget.username.geometry().contains(event.pos()) or 
-                        self.login_widget.password.geometry().contains(event.pos())):
-                    self.login_widget.username.clearFocus()
-                    self.login_widget.password.clearFocus()
+            if not (on_user or on_pass):
+                self.login_widget.username.clearFocus()
+                self.login_widget.password.clearFocus()
         return super().eventFilter(obj, event)
 
     def handle_login(self):
@@ -135,44 +86,58 @@ class MainWindow(QtWidgets.QMainWindow):
         ps = self.login_widget.password.text()
 
         self.db.cur.execute(
-                "SELECT * FROM cms.users WHERE username = %s AND password = %s",
-                (us, ps)
+                "SELECT * FROM cms.users WHERE username = %s AND status != 'DELETED'",
+                (us,)
             )
         result = self.db.cur.fetchone()
 
-        if result != None :
-            # Clear any previous dashboard widgets
-            for i in range(self.stack.count() - 1, 0, -1):
-                widget = self.stack.widget(i)
-                self.stack.removeWidget(widget)
-                widget.deleteLater()
+        # التحقق من وجود المستخدم ثم مطابقة الهاش
+        if result is not None:
+            stored_password = result[2]
+            try:
+                # التحقق مما إذا كانت كلمة المرور المدخلة تطابق الهاش المخزن
+                is_valid = bcrypt.checkpw(ps.encode('utf-8'), stored_password.encode('utf-8'))
+            except Exception:
+                is_valid = (ps == stored_password)
 
-            if us == (result[1]) and ps == (result[2]) and (result[7] == 1) :
-                self.admin_dashboard = AdminWindow(main_shell=self)
-                self.stack.addWidget(self.admin_dashboard)
-                self.stack.setCurrentWidget(self.admin_dashboard)
-                self.login_widget.username.clear()
-                self.login_widget.password.clear()
+            if is_valid:
+                # Clear any previous dashboard widgets
+                for i in range(self.stack.count() - 1, 0, -1):
+                    widget = self.stack.widget(i)
+                    self.stack.removeWidget(widget)
+                    widget.deleteLater()
 
-            elif us == result[1] and ps == result[2] and (result[7] == 2)  :
-                self.user_dashboard = UserWindow(result[0], main_shell=self)
-                self.stack.addWidget(self.user_dashboard)
-                self.stack.setCurrentWidget(self.user_dashboard)
-                self.login_widget.username.clear()
-                self.login_widget.password.clear()
+                if us == (result[1]) and (result[7] == 1):
+                    self.admin_dashboard = AdminWindow(main_shell=self)
+                    self.stack.addWidget(self.admin_dashboard)
+                    self.stack.setCurrentWidget(self.admin_dashboard)
+                    self.login_widget.username.clear()
+                    self.login_widget.password.clear()
 
-            elif us == result[1] and ps == result[2] and (result[7] == 3)  :
-                self.petition_clerk_dashboard = Petition_Clerks(result[0], main_shell=self)
-                self.stack.addWidget(self.petition_clerk_dashboard)
-                self.stack.setCurrentWidget(self.petition_clerk_dashboard)
-                self.login_widget.username.clear()
-                self.login_widget.password.clear()
+                elif us == result[1] and (result[7] == 2):
+                    self.user_dashboard = UserWindow(result[0], main_shell=self)
+                    self.stack.addWidget(self.user_dashboard)
+                    self.stack.setCurrentWidget(self.user_dashboard)
+                    self.login_widget.username.clear()
+                    self.login_widget.password.clear()
 
-                
-            elif us == result[1] and ps == result[2] and (result[7] == 4):
-                self.judge_dashboard = JudgeWindow(result[0], main_shell=self)
-                self.stack.addWidget(self.judge_dashboard)
-                self.stack.setCurrentWidget(self.judge_dashboard)
+                elif us == result[1] and (result[7] == 3):
+                    self.petition_clerk_dashboard = Petition_Clerks(result[0], main_shell=self)
+                    self.stack.addWidget(self.petition_clerk_dashboard)
+                    self.stack.setCurrentWidget(self.petition_clerk_dashboard)
+                    self.login_widget.username.clear()
+                    self.login_widget.password.clear()
+
+                elif us == result[1] and (result[7] == 4):
+                    self.judge_dashboard = JudgeWindow(result[0], main_shell=self)
+                    self.stack.addWidget(self.judge_dashboard)
+                    self.stack.setCurrentWidget(self.judge_dashboard)
+                    self.login_widget.username.clear()
+                    self.login_widget.password.clear()
+
+            else:
+                # Wrong password but user exists
+                QMessageBox.warning(self, "خطأ في تسجيل الدخول", "اسم المستخدم أو كلمة المرور غير صحيحة.")
                 self.login_widget.username.clear()
                 self.login_widget.password.clear()
 
@@ -202,5 +167,4 @@ class MainWindow(QtWidgets.QMainWindow):
 
 app = QApplication(sys.argv)
 window = MainWindow()
-window.show()
 sys.exit(app.exec_())

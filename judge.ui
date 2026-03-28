@@ -386,7 +386,7 @@ QTableWidget#client_table::item:selected {
            <item>
             <widget class="QLabel" name="calJudgeLabel">
              <property name="text">
-              <string>القاضي</string>
+              <string>فضيلة القاضي</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>

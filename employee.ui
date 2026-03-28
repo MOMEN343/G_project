@@ -964,6 +964,7 @@ border: none;
                 <string>حالة القضية</string>
                </property>
               </column>
+
              </widget>
             </item>
            </layout>
@@ -1499,10 +1500,90 @@ QComboBox QAbstractItemView {
                </spacer>
               </item>
               <item>
+               <widget class="QPushButton" name="btn_delete_petition">
+                <property name="minimumSize">
+                 <size>
+                  <width>135</width>
+                  <height>45</height>
+                 </size>
+                </property>
+                <property name="cursor">
+                 <cursorShape>PointingHandCursor</cursorShape>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">
+                  QPushButton {
+                    background-color: #e63946;
+                    color: white;
+                    border-radius: 12px;
+                    font-size: 15px;
+                    font-weight: bold;
+                    padding: 5px 10px;
+                    border: 1px solid rgba(255,255,255,0.1);
+                  }
+                  QPushButton:hover { background-color: #9d0208; }
+                 </string>
+                </property>
+                <property name="text">
+                 <string>حذف الطلب</string>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>icons/recycle-bin-icon.png</normaloff>icons/recycle-bin-icon.png</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btn_edit_petition">
+                <property name="minimumSize">
+                 <size>
+                  <width>135</width>
+                  <height>45</height>
+                 </size>
+                </property>
+                <property name="cursor">
+                 <cursorShape>PointingHandCursor</cursorShape>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">
+                  QPushButton {
+                    background-color: #b08d57;
+                    color: white;
+                    border-radius: 12px;
+                    font-size: 15px;
+                    font-weight: bold;
+                    padding: 5px 10px;
+                    border: 1px solid rgba(255,255,255,0.1);
+                  }
+                  QPushButton:hover { background-color: #452829; }
+                 </string>
+                </property>
+                <property name="text">
+                 <string>تعديل الطلب</string>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>icons/edit.svg</normaloff>icons/edit.svg</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QPushButton" name="btn_create_cases">
                 <property name="minimumSize">
                  <size>
-                  <width>180</width>
+                  <width>200</width>
                   <height>45</height>
                  </size>
                 </property>
@@ -1514,7 +1595,7 @@ QComboBox QAbstractItemView {
                   QPushButton {
                     background-color: #452829;
                     color: white;
-                    border-radius: 10px;
+                    border-radius: 12px;
                     font-size: 15px;
                     font-weight: bold;
                     padding: 5px 15px;
@@ -1531,7 +1612,17 @@ QComboBox QAbstractItemView {
                  </string>
                 </property>
                 <property name="text">
-                 <string>✅ إنشاء القضايا المحددة</string>
+                 <string>إنشاء القضايا المحددة</string>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>icons/add.svg</normaloff>icons/add.svg</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
                 </property>
                </widget>
               </item>
@@ -1592,14 +1683,15 @@ QComboBox QAbstractItemView {
                 <string>نوع القضية</string>
                </property>
               </column>
+
              </widget>
             </item>
            </layout>
           </widget>
-         </widget>
-        </item>
-       </layout>
-      </item>
+          </widget>
+         </item>
+        </layout>
+       </item>
       <item>
        <widget class="QFrame" name="sideBar">
         <property name="sizePolicy">

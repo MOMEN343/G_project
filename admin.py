@@ -1,6 +1,7 @@
 import random
 import os
 import sys
+import bcrypt
 from db import DataBase
 from PyQt5 import uic
 from PyQt5.QtWidgets import (
@@ -83,6 +84,15 @@ class AdminWindow(QMainWindow):
                 role.role_name
             FROM cms.users
             JOIN cms.role ON cms.users.role_id = cms.role.role_id
+            WHERE status != 'DELETED'
+            ORDER BY 
+                CASE cms.users.role_id
+                    WHEN 1 THEN 1 -- مدير النظام
+                    WHEN 4 THEN 2 -- القاضي
+                    WHEN 2 THEN 3 -- الموظف
+                    WHEN 3 THEN 4 -- كاتب العرائض
+                    ELSE 5
+                END
             """)
 
         # Connect search bar
@@ -106,7 +116,7 @@ class AdminWindow(QMainWindow):
             # Add data items in columns 1-7
             items = [
                 QTableWidgetItem(user[1]),
-                QTableWidgetItem(user[2]),
+                QTableWidgetItem("********"),
                 QTableWidgetItem(user[3]),
                 QTableWidgetItem(user[4]),
                 QTableWidgetItem(user[5]),
@@ -167,7 +177,8 @@ class AdminWindow(QMainWindow):
     def update_table_row(self, row, username, password, fullname, email, phone, status, role):
         """تحديث بيانات السطر في الجدول"""
         self.employeesTable.item(row, 1).setText(username)
-        self.employeesTable.item(row, 2).setText(password)
+        # لا نقوم بعرض كلمة المرور الحقيقية أو الهاش في الجدول
+        self.employeesTable.item(row, 2).setText("********")
         self.employeesTable.item(row, 3).setText(fullname)
         self.employeesTable.item(row, 4).setText(email)
         self.employeesTable.item(row, 5).setText(phone)
@@ -200,21 +211,46 @@ class AdminWindow(QMainWindow):
         if confirm == QMessageBox.Yes:
             try:
                 db = DataBase()
-                for user_id in ids_to_delete:
-                    # قد نحتاج لحذف السجلات المرتبطة أولاً إذا كانت القيود تمنع الحذف المباشر
-                    # لكن هنا سنحاول الحذف المباشر أولاً
-                    db.cur.execute("DELETE FROM cms.users WHERE user_id = %s", (user_id,))
+                deleted_count = 0
+                deactivated_count = 0
+                rows_actually_removed = []
+                
+                for i, user_id in enumerate(ids_to_delete):
+                    current_row = rows_to_delete[i]
+                    try:
+                        # محاولة الحذف الفعلي
+                        db.cur.execute("DELETE FROM cms.users WHERE user_id = %s", (user_id,))
+                        deleted_count += 1
+                        rows_actually_removed.append(current_row)
+                    except Exception:
+                        # فشل الحذف بسبب القيود -> عرض خيار التعطيل
+                        db.conn.rollback() 
+                        reply = QMessageBox.question(
+                            self, "تنبيه", 
+                            f"الموظف (رقم {user_id}) مرتبط بسجلات أخرى.\nلا يمكن حذفه نهائياً، هل تود تعطيله وإخفاؤه من القائمة بدلاً من ذلك؟",
+                            QMessageBox.Yes | QMessageBox.No
+                        )
+                        if reply == QMessageBox.Yes:
+                            db.cur.execute("UPDATE cms.users SET status = 'DELETED' WHERE user_id = %s", (user_id,))
+                            deactivated_count += 1
+                            rows_actually_removed.append(current_row)
                 
                 db.conn.commit()
                 db.close()
-                QMessageBox.information(self, "نجاح", "تم حذف الموظفين المحددين بنجاح")
                 
-                # تحديث الجدول (الحذف من الأسفل للأعلى للحفاظ علىIndexes)
-                for row in sorted(rows_to_delete, reverse=True):
+                msg = ""
+                if deleted_count > 0: msg += f"تم حذف {deleted_count} موظف بنجاح.\n"
+                if deactivated_count > 0: msg += f"تم تعطيل {deactivated_count} موظف بنجاح."
+                
+                if msg:
+                    QMessageBox.information(self, "نجاح", msg)
+                
+                # تحديث الجدول (حذف الأسطر التي تم معالجتها فقط من الواجهة)
+                for row in sorted(rows_actually_removed, reverse=True):
                     self.employeesTable.removeRow(row)
                     
             except Exception as e:
-                QMessageBox.critical(self, "خطأ", f"حدث خطأ أثناء الحذف:\n{str(e)}\nقد يكون الموظف مرتبطاً بقضايا أو مستندات حالية.")
+                QMessageBox.critical(self, "خطأ", "حدث خطأ غير متوقع أثناء عملية الحذف.")
 
     def select_all_employees(self, state):
         """تحديد أو إلغاء تحديد جميع الموظفين في الجدول"""
@@ -240,10 +276,10 @@ class AdminWindow(QMainWindow):
         self.employeesTable.setCellWidget(row_position, 0, checkbox_container)
         checkbox_container.setProperty("user_id", user_id)
 
-        # Add data items in columns 1-7
+        # Add data items in columns 1-7 (Password masked)
         items = [
             QTableWidgetItem(username),
-            QTableWidgetItem(password),
+            QTableWidgetItem("********"),
             QTableWidgetItem(full_name),
             QTableWidgetItem(email),
             QTableWidgetItem(phone),
@@ -391,14 +427,39 @@ class AddUserWindow(QMainWindow):
         # إنشاء اتصال جديد بالقاعدة
         db = DataBase()
 
+        # التحقق من عدم تكرار اسم المستخدم (تم إزالة التحقق من كلمة المرور لأنها ستكون مشفرة)
+        check_sql = "SELECT user_id FROM cms.users WHERE username = %s"
+        params = [username]
+        if self.is_edit_mode:
+            check_sql += " AND user_id != %s"
+            params.append(self.employee_data['user_id'])
+        
+        db.cur.execute(check_sql, tuple(params))
+        if db.cur.fetchone():
+            QMessageBox.warning(self, "تنبيه", "اسم المستخدم مستخدم بالفعل! يرجى إدخال اسم مستخدم فريد.")
+            db.close()
+            return
+
         if self.is_edit_mode:
             # وضع التعديل - تحديث البيانات
-            db.cur.execute("""
-                UPDATE cms.users 
-                SET username = %s, password = %s, full_name = %s, email = %s, 
-                    phone = %s, status = %s, role_id = %s
-                WHERE user_id = %s
-            """, (username, password, full_name, email, phone, status, role_id, self.employee_data['user_id']))
+            if password == "********":
+                # لم يتم تغيير كلمة المرور، نقوم بتحديث البيانات الأخرى فقط
+                db.cur.execute("""
+                    UPDATE cms.users 
+                    SET username = %s, full_name = %s, email = %s, 
+                        phone = %s, status = %s, role_id = %s
+                    WHERE user_id = %s
+                """, (username, full_name, email, phone, status, role_id, self.employee_data['user_id']))
+            else:
+                # تم إدخال كلمة مرور جديدة، نقوم بتشفيرها وتحديثها
+                hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                db.cur.execute("""
+                    UPDATE cms.users 
+                    SET username = %s, password = %s, full_name = %s, email = %s, 
+                        phone = %s, status = %s, role_id = %s
+                    WHERE user_id = %s
+                """, (username, hashed_pw, full_name, email, phone, status, role_id, self.employee_data['user_id']))
+            
             db.conn.commit()
             db.close()
 
@@ -412,10 +473,13 @@ class AddUserWindow(QMainWindow):
         else:
             # وضع الإضافة - إدخال موظف جديد
             user_id = random.randint(20260000, 20269999)
+            # تشفير كلمة المرور قبل الحفظ
+            hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            
             db.cur.execute(
                 "INSERT INTO cms.users (user_id, username, password, full_name, email, phone, status, role_id) "
                 "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
-                (user_id, username, password, full_name, email, phone, status, role_id)
+                (user_id, username, hashed_pw, full_name, email, phone, status, role_id)
             )
             db.conn.commit()
             db.close()

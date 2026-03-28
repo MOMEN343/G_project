@@ -167,8 +167,6 @@ class JudgeWindow(QMainWindow):
             res = self.db.cur.fetchone()
             if res:
                 name = res[0]
-                if hasattr(self, 'judge_name_ar'):
-                    self.judge_name_ar.setText(f"فضيلة الشيخ {name}")
                 # update calendar judge name too
                 if hasattr(self, 'calJudgeName'):
                     self.calJudgeName.setText(name)
@@ -1020,12 +1018,12 @@ class JudgeWindow(QMainWindow):
             no_docs.setStyleSheet("color:#888;font-size:12px;")
             vbox.addWidget(no_docs)
 
-        verdict_label = QLabel("أدخل نص الحكم (مقدار النفقة ثم تفاصيل الحكم):")
+        verdict_label = QLabel("أدخل مقدار النفقة")
         verdict_label.setObjectName("verdict_label")
         vbox.addWidget(verdict_label)
 
         self.verdict_text_edit = QTextEdit()
-        self.verdict_text_edit.setPlaceholderText("مثال: 500 دينار\nثم اكتب هنا نص الحكم ليتم وضعه في ملف الوورد...")
+        self.verdict_text_edit.setPlaceholderText(" مقدار النفقة")
         self.verdict_text_edit.setMinimumHeight(150)
         self.verdict_text_edit.setMaximumHeight(250)
         self.verdict_text_edit.setStyleSheet("background-color: white !important; color: #452829; border: 1px solid #ddd; border-radius: 6px; font-size: 16px")
@@ -1517,7 +1515,7 @@ class JudgeWindow(QMainWindow):
             db = DataBase()
             # 1. Fetch case details and CASE TYPE
             db.cur.execute("""
-                SELECT cl.plaintiff_name, cl.defendant_name, cl.client_id, c.case_type
+                SELECT cl.plaintiff_name, cl.defendant_name, cl.client_id, c.case_type, cl.plaintiff_address, cl.defendant_address
                 FROM cms.court_case c
                 JOIN cms.case_client cc ON c.case_id = cc.case_id
                 JOIN cms.client cl ON cc.client_id = cl.client_id
@@ -1528,18 +1526,22 @@ class JudgeWindow(QMainWindow):
                 QMessageBox.warning(self, "خطأ", "بيانات القضية غير مكتملة.")
                 db.close()
                 return
-            p_full, d_full, client_id, case_type = res
+            p_full, d_full, client_id, case_type, p_addr, d_addr = res
 
             # Auto-template mapping
-            template_name = f"حكم - {case_type}"
+            if case_type == "نفقة زوجة":
+                template_name = "ضبط دعوى نفقة زوجة"
+            else:
+                template_name = f"حكم - {case_type}"
+            
             template_path = os.path.join("Template files", f"{template_name}.docx")
             
             # Fallback path logic
-            if not os.path.exists(template_path):
+            if not os.path.exists(template_path) and case_type != "نفقة زوجة":
                 template_path = os.path.join("Template files", f"الحكم - {case_type}.docx")
 
             if not os.path.exists(template_path):
-                 QMessageBox.warning(self, "خطأ", f"لم يتم العثور على قالب لهذا النوع من القضايا: {case_type}\nتأكد من وجود ملف باسم 'حكم - {case_type}.docx' في مجلد القوالب.")
+                 QMessageBox.warning(self, "خطأ", f"لم يتم العثور على قالب لهذا النوع من القضايا: {case_type}\nتأكد من وجود ملف باسم '{template_name}.docx' في مجلد القوالب.")
                  db.close()
                  return
 
@@ -1560,23 +1562,51 @@ class JudgeWindow(QMainWindow):
             shutil.copy2(template_path, final_path)
             
             doc = Document(final_path)
-            p_first = p_full.split()[0] if p_full else "—"
-            d_first = d_full.split()[0] if d_full else "—"
+            p_parts = p_full.split() if p_full else []
+            p_first = p_parts[0] if len(p_parts) > 0 else "—"
+            p_second = p_parts[1] if len(p_parts) > 1 else ""
+            p_third_fourth = " ".join(p_parts[2:]) if len(p_parts) > 2 else ""
+            
+            d_parts = d_full.split() if d_full else []
+            d_first = d_parts[0] if len(d_parts) > 0 else "—"
+            d_second = d_parts[1] if len(d_parts) > 1 else ""
+            d_third_fourth = " ".join(d_parts[2:]) if len(d_parts) > 2 else ""
+            
+            p_addr_str = str(p_addr) if p_addr else ""
+            p_from = p_addr_str.split('-')[0].strip() if '-' in p_addr_str else p_addr_str
+            p_res = p_addr_str.split('-')[1].strip() if '-' in p_addr_str else "-"
+
+            d_addr_str = str(d_addr) if d_addr else ""
+            d_from = d_addr_str.split('-')[0].strip() if '-' in d_addr_str else d_addr_str
+            d_res = d_addr_str.split('-')[1].strip() if '-' in d_addr_str else "-"
+
             judge_name = self.calJudgeName.text() if hasattr(self, 'calJudgeName') else "—"
             
             placeholders = {
-                "{PLAINTIFF_FULL}": p_full, "{DEFENDANT_FULL}": d_full,
-                "{PLAINTIFF_FIRST}": p_first, "{DEFENDANT_FIRST}": d_first,
+                "{PLAINTIFF_NAME}": p_full,
+                "{DEFENDANT_NAME}": d_full,
+                "{PLAINTIFF_FULL}": p_full, 
+                "{DEFENDANT_FULL}": d_full,
+                "{PLAINTIFF_FIRST}": p_first, 
+                "{PLAINTIFF_SECOND}": p_second,
+                "{PLAINTIFF_THIRD_FOURTH}": p_third_fourth,
+                "{DEFENDANT_FIRST}": d_first,
+                "{DEFENDANT_SECOND}": d_second,
+                "{DEFENDANT_THIRD_FOURTH}": d_third_fourth,
+                "{PLAINTIFF_FROM}": p_from,
+                "{PLAINTIFF_RESIDENT}": p_res,
+                "{DEFENDANT_FROM}": d_from,
+                "{DEFENDANT_RESIDENT}": d_res,
                 "{AMOUNT}": amount,
                 "{HIJRI_DATE}": greg_to_hijri(date.today()),
                 "{GREGORIAN_DATE}": date.today().strftime("%Y/%m/%d"),
-                "{CLERK_NAME}": clerk_name, "{JUDGE_NAME}": judge_name,
+                "{CLERK_NAME}": clerk_name, 
+                "{JUDGE_NAME}": judge_name,
                 "{VERDICT_TEXT}": verdict_body
             }
 
             from doc_helpers import safe_replace_in_doc
             safe_replace_in_doc(doc, placeholders)
-
             doc.save(final_path)
 
             # 4. Update Database: Case Status and Session Status

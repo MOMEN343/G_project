@@ -122,6 +122,11 @@ class UserWindow(QMainWindow):
         self.searchMasterRecord.textChanged.connect(self.filter_master_record)
         self.searchScheduling.textChanged.connect(self.filter_scheduling)
         
+        if hasattr(self, 'btn_edit_petition'):
+            self.btn_edit_petition.clicked.connect(self.edit_selected_petition)
+        if hasattr(self, 'btn_delete_petition'):
+            self.btn_delete_petition.clicked.connect(self.delete_selected_petitions)
+        
         
         # 2. Fix Labels and Swap with Spacers to ensure Right Side
         for name in ['labelJudgeWrapper', 'labelDateWrapper', 'labelTimeWrapper']:
@@ -173,10 +178,9 @@ class UserWindow(QMainWindow):
         self.selected_documents = set()
         self.doc_checkboxes = [] 
         
-        if hasattr(self, 'btn_delete_docs'):
-            self.btn_delete_docs.clicked.connect(self.delete_selected_documents)
         if hasattr(self, 'check_all_docs'):
             self.check_all_docs.stateChanged.connect(self.select_all_documents)
+
 
         # Ensure we start at the empty page
         if hasattr(self, 'mainStack'):
@@ -339,7 +343,11 @@ class UserWindow(QMainWindow):
                 item = QtWidgets.QTableWidgetItem(str(val))
                 item.setTextAlignment(Qt.AlignCenter)
                 table.setItem(row, col, item)
-            table.setRowHeight(row, 55)
+            
+            table.setRowHeight(row, 50)
+        
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
 
         try:
             self.btn_create_cases.clicked.disconnect()
@@ -402,6 +410,151 @@ class UserWindow(QMainWindow):
         db.close()
         QMessageBox.information(self, "نجاح", f"تم إنشاء {len(selected_rows)} قضية بنجاح ✅")
         self.show_add_case()
+
+    def edit_selected_petition(self):
+        selected_rows = [i for i, cb in enumerate(self.add_case_checkboxes) if cb.isChecked()]
+        if len(selected_rows) != 1:
+            QMessageBox.warning(self, "تنبيه", "يرجى اختيار قضية واحدة فقط للتعديل")
+            return
+        client_id = self._add_case_clients[selected_rows[0]][0]
+        self.edit_petition(client_id)
+
+    def delete_selected_petitions(self):
+        selected_rows = [i for i, cb in enumerate(self.add_case_checkboxes) if cb.isChecked()]
+        if not selected_rows:
+            QMessageBox.warning(self, "تنبيه", "يرجى اختيار طلب واحد على الأقل للحذف")
+            return
+        
+        reply = QMessageBox.question(self, "تأكيد الحذف", f"هل أنت متأكد من حذف {len(selected_rows)} طلب/عريضة نهائياً؟",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            try:
+                db = DataBase()
+                for idx in selected_rows:
+                    client_id = self._add_case_clients[idx][0]
+                    # Get documents
+                    db.cur.execute("SELECT document_id, file_path FROM cms.document WHERE client_id = %s", (client_id,))
+                    docs = db.cur.fetchall()
+                    for doc_id, file_path in docs:
+                        if file_path and os.path.exists(file_path):
+                            try: os.remove(file_path)
+                            except: pass
+                        db.cur.execute("DELETE FROM cms.file_transfer WHERE document_id = %s", (doc_id,))
+                        db.cur.execute("DELETE FROM cms.notification WHERE document_id = %s", (doc_id,))
+                    db.cur.execute("DELETE FROM cms.document WHERE client_id = %s", (client_id,))
+                    db.cur.execute("DELETE FROM cms.client WHERE client_id = %s", (client_id,))
+                
+                db.conn.commit()
+                db.close()
+                QMessageBox.information(self, "نجاح", "تم حذف الطلبات المحددة بنجاح ✅")
+                self.show_add_case()
+            except Exception as e:
+                QMessageBox.critical(self, "خطأ", f"حدث خطأ أثناء الحذف: {str(e)}")
+
+    def delete_petition(self, client_id):
+        reply = QMessageBox.question(self, "تأكيد الحذف", "هل أنت متأكد من حذف هذه العريضة (طلب القضية) بجميع مستنداتها؟",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            try:
+                db = DataBase()
+                # 1. Get documents
+                db.cur.execute("SELECT document_id, file_path FROM cms.document WHERE client_id = %s", (client_id,))
+                docs = db.cur.fetchall()
+                for doc_id, file_path in docs:
+                    if file_path and os.path.exists(file_path):
+                        try: os.remove(file_path)
+                        except: pass
+                    db.cur.execute("DELETE FROM cms.file_transfer WHERE document_id = %s", (doc_id,))
+                    db.cur.execute("DELETE FROM cms.notification WHERE document_id = %s", (doc_id,))
+                
+                # 2. Delete documents
+                db.cur.execute("DELETE FROM cms.document WHERE client_id = %s", (client_id,))
+                
+                # 3. Delete client
+                db.cur.execute("DELETE FROM cms.client WHERE client_id = %s", (client_id,))
+                
+                db.conn.commit()
+                db.close()
+                QMessageBox.information(self, "نجاح", "تم حذف العريضة بنجاح ✅")
+                self.show_add_case()
+            except Exception as e:
+                QMessageBox.critical(self, "خطأ", f"حدث خطأ أثناء الحذف: {str(e)}")
+
+    def edit_petition(self, client_id):
+        db = DataBase()
+        db.cur.execute("""
+            SELECT plaintiff_name, plaintiff_national_id, plaintiff_phone, plaintiff_address,
+                   defendant_name, defendant_national_id, defendant_phone, defendant_address,
+                   case_type 
+            FROM cms.client WHERE client_id = %s
+        """, (client_id,))
+        client_data = db.cur.fetchone()
+        db.close()
+        
+        if not client_data: return
+        
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("تعديل كافة بيانات الطلب")
+        dialog.setFixedSize(550, 500)
+        dialog.setLayoutDirection(Qt.RightToLeft)
+        layout = QVBoxLayout(dialog)
+        
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        container = QWidget()
+        form_layout = QtWidgets.QFormLayout(container)
+        
+        fields = {}
+        labels = [
+            ("اسم المدعي:", client_data[0]),
+            ("رقم هوية المدعي:", client_data[1]),
+            ("جوال المدعي:", client_data[2]),
+            ("عنوان المدعي:", client_data[3]),
+            ("اسم المدعى عليه:", client_data[4]),
+            ("رقم هوية المدعى عليه:", client_data[5]),
+            ("جوال المدعى عليه:", client_data[6]),
+            ("عنوان المدعى عليه:", client_data[7]),
+            ("نوع القضية:", client_data[8]),
+        ]
+        
+        for i, (lbl_txt, val) in enumerate(labels):
+            le = QtWidgets.QLineEdit(str(val) if val else "")
+            le.setMinimumHeight(35)
+            form_layout.addRow(lbl_txt, le)
+            fields[i] = le
+        
+        scroll.setWidget(container)
+        layout.addWidget(scroll)
+        
+        save_btn = QPushButton("حفظ كافة التغييرات")
+        save_btn.setStyleSheet("background-color: #452829; color: white; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 14px;")
+        layout.addWidget(save_btn)
+        
+        def save_changes():
+            try:
+                db_save = DataBase()
+                db_save.cur.execute("""
+                    UPDATE cms.client 
+                    SET plaintiff_name = %s, plaintiff_national_id = %s, plaintiff_phone = %s, plaintiff_address = %s,
+                        defendant_name = %s, defendant_national_id = %s, defendant_phone = %s, defendant_address = %s,
+                        case_type = %s
+                    WHERE client_id = %s
+                """, (
+                    fields[0].text(), fields[1].text(), fields[2].text(), fields[3].text(),
+                    fields[4].text(), fields[5].text(), fields[6].text(), fields[7].text(),
+                    fields[8].text(), client_id
+                ))
+                db_save.conn.commit()
+                db_save.close()
+                QMessageBox.information(dialog, "نجاح", "تم تحديث كافة بيانات الطلب بنجاح ✅")
+                dialog.accept()
+                self.show_add_case()
+            except Exception as e:
+                QMessageBox.critical(dialog, "خطأ", f"حدث خطأ أثناء الحفظ: {str(e)}")
+        
+        save_btn.clicked.connect(save_changes)
+        dialog.exec_()
 
 
     def get_hijri_date_string(self, date):
@@ -814,7 +967,7 @@ class UserWindow(QMainWindow):
                 "{DEFENDANT_NAME}": defendant_name or "",
                 "{DEFENDANT_FROM}": d_from,
                 "{DEFENDANT_RESIDENT}": d_res,
-                "{CURRENT_CASE_TYPE}": doc_type or "",
+                "{CURRENT_CASE_TYPE}": f" {doc_type}" if doc_type else "",
                 "{ENTRY_DATE}": upload_date.strftime("%Y/%m/%d") if upload_date else datetime.now().strftime("%Y/%m/%d"),
                 "{JUDGE_NAME}": judge_name or "",
                 "{CASE_NUMBER}": case_number,
@@ -823,11 +976,6 @@ class UserWindow(QMainWindow):
                 "{SESSION_TIME}": session_time_str,
             }
 
-            for key in placeholders:
-                val = str(placeholders[key])
-                if val and not val.startswith(" "):
-                    placeholders[key] = " " + val
-            
             from doc_helpers import safe_replace_in_doc
             safe_replace_in_doc(doc, placeholders)
             doc.save(final_file_path)
@@ -1088,12 +1236,11 @@ class UserWindow(QMainWindow):
         
         db = DataBase()
         db.cur.execute("""
-            SELECT ct.case_number, c.plaintiff_name,c.defendant_name, ct.case_type, ct.filing_date, ct.status
+            SELECT ct.case_number, c.plaintiff_name, c.defendant_name, ct.case_type, ct.filing_date, ct.status, ct.case_id
             FROM cms.case_client cc
             JOIN cms.client c ON cc.client_id = c.client_id
             JOIN cms.court_case ct ON cc.case_id = ct.case_id
-            -- order ascending so case numbers start from 1 and increase downwards
-            ORDER BY ct.filing_date ASC, ct.case_number ASC
+            ORDER BY ct.filing_date ASC, CAST(SPLIT_PART(ct.case_number, '/', 2) AS INTEGER) ASC
         """)
         records = db.cur.fetchall()
         db.close()
@@ -1102,26 +1249,129 @@ class UserWindow(QMainWindow):
         table.verticalHeader().setVisible(False)
         table.setRowCount(0)
         table.setRowCount(len(records))
+        table.verticalHeader().setDefaultSectionSize(50) # Increase row height
         
         header = table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
         
         for row_idx, row_data in enumerate(records):
-            for col_idx, value in enumerate(row_data):
+            table.setRowHeight(row_idx, 50)
+            for col_idx, value in enumerate(row_data[:6]):
                 item = QtWidgets.QTableWidgetItem(str(value))
                 item.setTextAlignment(Qt.AlignCenter)
-                # color status column (index 5) appropriately
                 if col_idx == 5:
-                    if str(value) == "جديد":
-                        item.setForeground(QColor("#2ECC71"))
-                    elif str(value) == "مغلق":
-                        item.setForeground(QColor("#E74C3C"))
+                    status_text = str(value)
+                    if status_text in ["جديد", "مفتوحة"]:
+                        item.setForeground(QColor("#2ECC71")) # Green
+                    elif status_text in ["مغلق", "منتهية"]:
+                        item.setForeground(QColor("#E74C3C")) # Red
                     font = item.font()
                     font.setBold(True)
                     item.setFont(font)
                 table.setItem(row_idx, col_idx, item)
-        # enforce ascending order by case number column so cases start at 1 and increase downwards
-        table.sortItems(0, Qt.AscendingOrder)
+
+        self.searchMasterRecord.clear()
+        self.mainStack.setCurrentWidget(self.page_master_record)
+
+
+    def delete_case(self, case_id):
+        reply = QMessageBox.question(self, "تأكيد الحذف", "هل أنت متأكد من حذف هذه القضية بجميع بياناتها؟",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            try:
+                db = DataBase()
+                # 1. Delete notifications related to this case? 
+                # (Need to check if notifications are linked to case_id, usually they are linked via message or document_id)
+                
+                # 2. Get document IDs related to this case
+                db.cur.execute("SELECT document_id, file_path FROM cms.document WHERE case_id = %s", (case_id,))
+                docs = db.cur.fetchall()
+                
+                for doc_id, file_path in docs:
+                    # Delete physical file
+                    if file_path and os.path.exists(file_path):
+                        try: os.remove(file_path)
+                        except: pass
+                    
+                    # Delete file transfers
+                    db.cur.execute("DELETE FROM cms.file_transfer WHERE document_id = %s", (doc_id,))
+                    # Delete notifications
+                    db.cur.execute("DELETE FROM cms.notification WHERE document_id = %s", (doc_id,))
+                
+                # 3. Delete documents
+                db.cur.execute("DELETE FROM cms.document WHERE case_id = %s", (case_id,))
+                
+                # 4. Delete sessions
+                db.cur.execute("DELETE FROM cms.session WHERE case_id = %s", (case_id,))
+                
+                # 5. Delete case-client links
+                db.cur.execute("DELETE FROM cms.case_client WHERE case_id = %s", (case_id,))
+                
+                # 6. Delete the case itself
+                db.cur.execute("DELETE FROM cms.court_case WHERE case_id = %s", (case_id,))
+                
+                db.conn.commit()
+                db.close()
+                QMessageBox.information(self, "نجاح", "تم حذف القضية بنجاح ✅")
+                self.show_master_record()
+            except Exception as e:
+                QMessageBox.critical(self, "خطأ", f"حدث خطأ أثناء الحذف: {str(e)}")
+
+    def edit_case(self, case_id):
+        db = DataBase()
+        db.cur.execute("""
+            SELECT case_number, case_type, status, filing_date 
+            FROM cms.court_case WHERE case_id = %s
+        """, (case_id,))
+        case_data = db.cur.fetchone()
+        db.close()
+        
+        if not case_data: return
+        
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("تعديل بيانات القضية")
+        dialog.setFixedSize(400, 300)
+        dialog.setLayoutDirection(Qt.RightToLeft)
+        layout = QVBoxLayout(dialog)
+        
+        form_layout = QtWidgets.QFormLayout()
+        
+        num_edit = QtWidgets.QLineEdit(case_data[0])
+        type_edit = QtWidgets.QLineEdit(case_data[1])
+        status_combo = QtWidgets.QComboBox()
+        status_combo.addItems(["مفتوحة", "مغلق", "مؤجل"])
+        status_combo.setCurrentText(case_data[2])
+        
+        form_layout.addRow("رقم القضية:", num_edit)
+        form_layout.addRow("نوع القضية:", type_edit)
+        form_layout.addRow("حالة القضية:", status_combo)
+        
+        layout.addLayout(form_layout)
+        
+        save_btn = QPushButton("حفظ التغييرات")
+        save_btn.setStyleSheet("background-color: #452829; color: white; padding: 10px; border-radius: 5px; font-weight: bold;")
+        layout.addWidget(save_btn)
+        
+        def save_changes():
+            try:
+                db_save = DataBase()
+                db_save.cur.execute("""
+                    UPDATE cms.court_case 
+                    SET case_number = %s, case_type = %s, status = %s
+                    WHERE case_id = %s
+                """, (num_edit.text(), type_edit.text(), status_combo.currentText(), case_id))
+                db_save.conn.commit()
+                db_save.close()
+                QMessageBox.information(dialog, "نجاح", "تم تحديث بيانات القضية بنجاح ✅")
+                dialog.accept()
+                self.show_master_record()
+            except Exception as e:
+                QMessageBox.critical(dialog, "خطأ", f"حدث خطأ أثناء الحفظ: {str(e)}")
+        
+        save_btn.clicked.connect(save_changes)
+        dialog.exec_()
+        # Sorting is already handled correctly by the SQL query above (numeric order)
+        # Do NOT call table.sortItems here as it sorts by string, causing "10" < "2" bug
 
         self.searchMasterRecord.clear()
         self.mainStack.setCurrentWidget(self.page_master_record)
@@ -1299,37 +1549,13 @@ class UserWindow(QMainWindow):
                 "{ENTRY_DATE}": datetime.now().strftime("%Y/%m/%d"),
             }
 
+            from doc_helpers import safe_replace_in_doc
             for (file_path,) in documents:
                 if not os.path.exists(file_path):
                     continue
                 try:
                     doc = Document(file_path)
-                    # Use THE MOST AGGRESSIVE replacement logic possible
-                    paragraphs = list(doc.paragraphs)
-                    for table in doc.tables:
-                        for row in table.rows:
-                            for cell in row.cells:
-                                paragraphs.extend(list(cell.paragraphs))
-                    
-                    for p in paragraphs:
-                        # First check if any placeholder is in the combined text of the paragraph
-                        p_text = p.text
-                        needs_save = False
-                        for key, val in placeholders.items():
-                            if key in p_text:
-                                p_text = p_text.replace(key, str(val))
-                                needs_save = True
-                        
-                        if needs_save:
-                            # NUCLEAR OPTION: Clear and rewrite the paragraph to force replacement
-                            # but try to keep it simple. If we have runs, we modify the runs.
-                            if p.runs:
-                                p.runs[0].text = p_text
-                                for i in range(1, len(p.runs)):
-                                    p.runs[i].text = ""
-                            else:
-                                p.text = p_text
-                    
+                    safe_replace_in_doc(doc, placeholders)
                     doc.save(file_path)
                     print(f"Successfully updated document: {file_path}")
                 except Exception as doc_error:

@@ -26,11 +26,59 @@ class Petition_Clerks(QMainWindow):
         self.current_template = None
 
         uic.loadUi(resource_path("petition_clerks2.ui"), self)
+        self.formFrame.setVisible(False)
+        self.welcome_label.setText("اختر لائحة دعوى من القائمة")
+        self.welcome_label.setStyleSheet("color: #452829; font-size: 32px; font-weight: bold;")
+        self.welcome_label.setMinimumWidth(600)
+        self.welcome_label.setVisible(True)
         self.setStyleSheet("""
         * {
             font-family: "Alyamama";
             color: #452829;
         }
+        #sideBar {
+            background-color: #452829;
+            min-width: 260px;
+        }
+        #sideBar QPushButton {
+            color: #f3e8df;
+            background-color: transparent;
+            border: none;
+            text-align: right;
+            padding-right: 25px;
+            font-size: 19px;
+            font-weight: bold;
+            min-height: 55px;
+            border-right: 5px solid transparent;
+        }
+        #sideBar QPushButton:hover {
+            background-color: rgba(0, 0, 0, 0.3);
+            color: white;
+        }
+        #sideBar QPushButton[active="true"] {
+            background-color: rgba(0, 0, 0, 0.3) !important;
+            color: white !important;
+            border-right: 5px solid #b08d57;
+            font-weight: bold;
+        }
+        }
+        """)
+        
+        self.logoutBtn.setFixedSize(230, 40)
+        self.logoutBtn.setStyleSheet("""
+            QPushButton {
+                color: #452829;
+                background-color: white;
+                border-radius: 10px;
+                font-weight: bold;
+                font-family: "Alyamama";
+                font-size: 16px;
+                border: none;
+            }
+            QPushButton:hover {
+                background-color: #e63946;
+                color: white;
+            }
         """)
         
         self.sendFile.clicked.connect(self.process_full_workflow)
@@ -58,14 +106,24 @@ class Petition_Clerks(QMainWindow):
         if hasattr(self, 'employeesTable'):
              QTimer.singleShot(0, lambda: self.employeesTable.setFocus())
 
+        # Tab Order Sequence
         self.setTabOrder(self.plaintiff_name, self.plaintiff_national_id)
         self.setTabOrder(self.plaintiff_national_id, self.plaintiff_phone)
         self.setTabOrder(self.plaintiff_phone, self.plaintiff_address)
+        
         self.setTabOrder(self.plaintiff_address, self.defendant_name)
         self.setTabOrder(self.defendant_name, self.defendant_national_id)
         self.setTabOrder(self.defendant_national_id, self.defendant_phone)
         self.setTabOrder(self.defendant_phone, self.defendant_address)
-        self.setTabOrder(self.defendant_address, self.comboBox)
+        
+        self.setTabOrder(self.defendant_address, self.divorce_date)
+        self.setTabOrder(self.divorce_date, self.divorce_court)
+        self.setTabOrder(self.divorce_court, self.iddah_end_date)
+        self.setTabOrder(self.iddah_end_date, self.pregnancy_end_date)
+        self.setTabOrder(self.pregnancy_end_date, self.furniture_value)
+        self.setTabOrder(self.furniture_value, self.dowry_value)
+        
+        self.setTabOrder(self.dowry_value, self.comboBox)
         self.setTabOrder(self.comboBox, self.sendFile)
 
     def load_receivers(self):
@@ -74,22 +132,55 @@ class Petition_Clerks(QMainWindow):
             db.cur.execute("SELECT user_id, full_name FROM cms.users WHERE role_id = '2'")
             users = db.cur.fetchall()
             self.comboBox.clear()
-            self.comboBox.addItem("اختر الموظف المستلم...", None)
+            self.comboBox.addItem("اختر الموظف المستلم", None)
             for user_id, name in users:
                 self.comboBox.addItem(name, user_id)
             db.close()
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to load receivers: {str(e)}")
 
+    def reset_sidebar_styles(self):
+        for btn_id in self.case_config.keys():
+            if hasattr(self, btn_id):
+                btn = getattr(self, btn_id)
+                btn.setProperty("active", False)
+                btn.style().unpolish(btn)
+                btn.style().polish(btn)
+
+    def set_active_button(self, button):
+        self.reset_sidebar_styles()
+        button.setProperty("active", True)
+        button.style().unpolish(button)
+        button.style().polish(button)
+
     def handle_case_selection_click(self):
         btn = self.sender()
         if btn:
+            self.set_active_button(btn)
             btn_id = btn.objectName()
             if btn_id in self.case_config:
                 config = self.case_config[btn_id]
                 self.current_case_type = config["label"]
                 self.current_template = config["template"]
                 self.label_2.setText(f"أدخل بيانات لائحة دعوى {self.current_case_type}")
+
+                # Show form and hide welcome label
+                self.welcome_label.setVisible(False)
+                self.formFrame.setVisible(True)
+
+                is_furniture = (self.current_case_type == "عفش بيت")
+                is_dowry = (self.current_case_type == "مهر مؤجل")
+                
+                # Section Header Visibility
+                self.hdr_divorce.setVisible(is_furniture or is_dowry)
+                
+                self.divorce_date.setVisible(is_furniture or is_dowry)
+                self.divorce_court.setVisible(is_furniture or is_dowry)
+                self.furniture_value.setVisible(is_furniture)
+                
+                self.iddah_end_date.setVisible(is_dowry)
+                self.pregnancy_end_date.setVisible(is_dowry)
+                self.dowry_value.setVisible(is_dowry)
 
     def process_full_workflow(self):
         if not hasattr(self, 'current_case_type') or not self.current_case_type:
@@ -155,9 +246,30 @@ class Petition_Clerks(QMainWindow):
                 "{PLAINTIFF_RESIDENT}": p_res,
                 "{DEFENDANT_NAME}": self.defendant_name.text(),
                 "{DEFENDANT_FROM}": d_from,
-                "{DEFENDANT_RESIDENT}": d_res,  
-                          
+                "{DEFENDANT_RESIDENT}": d_res,             
             }
+            
+            if self.current_case_type == "عفش بيت":
+                placeholders["{DIVORCE_DATE}"] = self.divorce_date.text()
+                placeholders["{FURNITURE_VALUE}"] = self.furniture_value.text()
+                placeholders["{DIVORCE_COURT}"] = self.divorce_court.text()
+
+            if self.current_case_type == "مهر مؤجل":
+                placeholders["{DIVORCE_DATE}"] = self.divorce_date.text()
+                placeholders["{DIVORCE_COURT}"] = self.divorce_court.text()
+                placeholders["{DOWRY_VALUE}"] = self.dowry_value.text()
+                
+                # Extract first name from full name
+                d_full_name = self.defendant_name.text().strip()
+                d_first_name = d_full_name.split(' ')[0] if d_full_name else ""
+                placeholders["{DEFENDANT_FIRST}"] = d_first_name
+                
+                # Logic for empty date fields: replace with "/  /" if empty
+                iddah_val = self.iddah_end_date.text().strip()
+                preg_val = self.pregnancy_end_date.text().strip()
+                
+                placeholders["{IDDAH_DATE}"] = iddah_val if iddah_val else "/  /"
+                placeholders["{PREG_DATE}"] = preg_val if preg_val else "/  /"
 
             from doc_helpers import safe_replace_in_doc
             
@@ -202,7 +314,7 @@ class Petition_Clerks(QMainWindow):
         except Exception as e:
             print(f"Failed to send notification: {e}")
 
-        QMessageBox.information(self, "نجاح", f"تم تسجيل الموكل، إنشاء الملف وإرساله بنجاح!\n\nسيتم فتح الملف الآن...")
+        QMessageBox.information(self, "نجاح", f"تم تسجيل الموكل، إنشاء الملف وإرساله بنجاح!")
         
         self.plaintiff_name.clear()
         self.plaintiff_national_id.clear()
@@ -212,11 +324,21 @@ class Petition_Clerks(QMainWindow):
         self.defendant_national_id.clear()
         self.defendant_phone.clear()
         self.defendant_address.clear()
+        self.divorce_date.clear()
+        self.furniture_value.clear()
+        self.divorce_court.clear()
+        self.divorce_date.setVisible(False)
+        self.furniture_value.setVisible(False)
+        self.divorce_court.setVisible(False)
+        self.formFrame.setVisible(False)
+        self.welcome_label.setVisible(True)
+        self.current_case_type = None
+        self.reset_sidebar_styles()
         self.comboBox.setCurrentIndex(0)
-        self.label_2.setText("أدخل بيانات لائحة الدعوى:")
+        self.label_2.setText("أدخل بيانات لائحة دعوى:")
 
     def log_out (self):
         if self.main_shell:
             self.main_shell.switch_to_login()
         else:
-            self.close()  
+            self.close()
